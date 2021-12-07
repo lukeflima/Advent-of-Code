@@ -8,18 +8,20 @@ fn part1() -> Result<(), std::io::Error> {
         .split(',')
         .map(parse_number)
         .collect();
+
+    let max_depth = *crabs.iter().max().unwrap();
+
     let mut min_fuel_use_value = usize::MAX;
-    for crab in &crabs {
-        let mut fuel = 0;
-        for i in 0..crabs.len() {
-            if crabs[i] == *crab {
+    for i in 0..max_depth {
+        let mut fuel = 0_usize;
+        for crab in &crabs {
+            if i == *crab {
                 continue;
             }
-            fuel += std::cmp::max(*crab, crabs[i]) - std::cmp::min(*crab, crabs[i]);
+            fuel += std::cmp::max(*crab, i) - std::cmp::min(*crab, i);
         }
         min_fuel_use_value = std::cmp::min(min_fuel_use_value, fuel);
     }
-
     println!("part1 {}", min_fuel_use_value);
 
     Ok(())
