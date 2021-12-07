@@ -1,12 +1,9 @@
 [package]
-name = "aoc1"
+name = "template"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-[[bin]]
-name = "aoc1"
-path = "main.rs"
+walkdir = "2.3.2"
