@@ -1,13 +1,8 @@
-fn part1() -> Result<(), std::io::Error> {
-    Ok(())
-}
+fn part1() {}
 
-fn part2() -> Result<(), std::io::Error> {
-    Ok(())
-}
+fn part2() {}
 
-fn main() -> Result<(), std::io::Error> {
-    part1()?;
-    part2()?;
-    Ok(())
+fn main() {
+    part1();
+    part2();
 }
