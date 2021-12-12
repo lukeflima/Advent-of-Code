@@ -22,13 +22,13 @@ fn part1() {
         }
         graph
     };
-    let mut paths: Vec<Vec<String>> = Default::default();
+    let mut paths: usize = 0;
     let mut unfinesh_paths: Vec<Vec<String>> = vec![vec![String::from("start")]];
 
     while !unfinesh_paths.is_empty() {
         let path = unfinesh_paths.pop().unwrap();
         if path.last().unwrap() == "end" {
-            paths.push(path);
+            paths += 1;
             continue;
         }
         for node in graph.get(&path[path.len() - 1]).unwrap() {
@@ -39,7 +39,7 @@ fn part1() {
         }
     }
 
-    println!("part1 {}", paths.len());
+    println!("part1 {}", paths);
 }
 
 fn part2() {
@@ -64,13 +64,13 @@ fn part2() {
         }
         graph
     };
-    let mut paths: Vec<Vec<String>> = Default::default();
+    let mut paths: usize = 0;
     let mut unfinesh_paths: Vec<(Vec<String>, bool)> = vec![(vec![String::from("start")], false)];
 
     while !unfinesh_paths.is_empty() {
         let (path, small_cave_revisit) = unfinesh_paths.pop().unwrap();
         if path.last().unwrap() == "end" {
-            paths.push(path);
+            paths += 1;
             continue;
         }
         for node in graph.get(&path[path.len() - 1]).unwrap() {
@@ -89,7 +89,7 @@ fn part2() {
             unfinesh_paths.last_mut().unwrap().0.push(node.clone());
         }
     }
-    println!("part2 {}", paths.len());
+    println!("part2 {}", paths);
 }
 
 fn main() {
