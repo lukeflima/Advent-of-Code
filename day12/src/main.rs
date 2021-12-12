@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 fn part1() {
-    let mut graph: HashMap<String, Vec<String>> = Default::default();
-    {
+    let graph: HashMap<String, Vec<String>> = {
+        let mut graph: HashMap<String, Vec<String>> = Default::default();
         let nodes_conn: Vec<Vec<String>> = std::fs::read_to_string("input")
             .unwrap()
             .as_mut_str()
@@ -20,7 +20,8 @@ fn part1() {
             graph.get_mut(&conn[0]).unwrap().push(conn[1].clone());
             graph.get_mut(&conn[1]).unwrap().push(conn[0].clone());
         }
-    }
+        graph
+    };
     let mut paths: Vec<Vec<String>> = Default::default();
     let mut unfinesh_paths: Vec<Vec<String>> = vec![vec![String::from("start")]];
 
@@ -42,8 +43,8 @@ fn part1() {
 }
 
 fn part2() {
-    let mut graph: HashMap<String, Vec<String>> = Default::default();
-    {
+    let graph: HashMap<String, Vec<String>> = {
+        let mut graph: HashMap<String, Vec<String>> = Default::default();
         let nodes_conn: Vec<Vec<String>> = std::fs::read_to_string("input")
             .unwrap()
             .as_mut_str()
@@ -61,7 +62,8 @@ fn part2() {
             graph.get_mut(&conn[0]).unwrap().push(conn[1].clone());
             graph.get_mut(&conn[1]).unwrap().push(conn[0].clone());
         }
-    }
+        graph
+    };
     let mut paths: Vec<Vec<String>> = Default::default();
     let mut unfinesh_paths: Vec<(Vec<String>, bool)> = vec![(vec![String::from("start")], false)];
 
