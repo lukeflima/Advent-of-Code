@@ -35,7 +35,11 @@ fn part1() {
     let (axis, value) = folds.into_iter().next().unwrap();
     let radius = std::cmp::min(value, if axis == 'y' { height } else { width } - value);
     for (x, y) in grid.clone().into_iter() {
-        if axis == 'y' && y > value {
+        if axis == 'y' && y >= value {
+            grid.remove(&(x, y));
+            if y == value {
+                continue;
+            }
             let dist = y - value;
             if dist <= radius {
                 let point = (x, value - dist);
@@ -45,6 +49,10 @@ fn part1() {
             }
         }
         if axis == 'x' && x > value {
+            grid.remove(&(x, y));
+            if x == value {
+                continue;
+            }
             let dist = x - value;
             if dist <= radius {
                 let point = (value - dist, y);
@@ -52,11 +60,6 @@ fn part1() {
                     grid.insert(point);
                 }
             }
-        }
-    }
-    for point in grid.clone() {
-        if (axis == 'y' && point.1 >= value) || (axis == 'x' && point.0 >= value) {
-            grid.remove(&point);
         }
     }
 
@@ -96,7 +99,11 @@ fn part2() {
     for (axis, value) in folds {
         let radius = std::cmp::min(value, if axis == 'y' { height } else { width } - value);
         for (x, y) in grid.clone().into_iter() {
-            if axis == 'y' && y > value {
+            if axis == 'y' && y >= value {
+                grid.remove(&(x, y));
+                if y == value {
+                    continue;
+                }
                 let dist = y - value;
                 if dist <= radius {
                     let point = (x, value - dist);
@@ -105,7 +112,11 @@ fn part2() {
                     }
                 }
             }
-            if axis == 'x' && x > value {
+            if axis == 'x' && x >= value {
+                grid.remove(&(x, y));
+                if x == value {
+                    continue;
+                }
                 let dist = x - value;
                 if dist <= radius {
                     let point = (value - dist, y);
@@ -120,11 +131,6 @@ fn part2() {
         }
         if axis == 'x' {
             width = value;
-        }
-        for point in grid.clone() {
-            if (axis == 'y' && point.1 >= value) || (axis == 'x' && point.0 >= value) {
-                grid.remove(&point);
-            }
         }
     }
 
