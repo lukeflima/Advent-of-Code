@@ -99,30 +99,20 @@ fn part2() {
     for (axis, value) in folds {
         let radius = std::cmp::min(value, if axis == 'y' { height } else { width } - value);
         for (x, y) in grid.clone().into_iter() {
-            if axis == 'y' && y >= value {
+            let (point, dist, cur_value) = if axis == 'y' {
+                let dist = if y >= value { y - value } else { value - y };
+                ((x, value - dist), dist, y)
+            } else {
+                let dist = if x >= value { x - value } else { value - x };
+                ((value - dist, y), dist, x)
+            };
+            if cur_value >= value {
                 grid.remove(&(x, y));
-                if y == value {
+                if cur_value == value {
                     continue;
                 }
-                let dist = y - value;
-                if dist <= radius {
-                    let point = (x, value - dist);
-                    if !grid.contains(&point) {
-                        grid.insert(point);
-                    }
-                }
-            }
-            if axis == 'x' && x >= value {
-                grid.remove(&(x, y));
-                if x == value {
-                    continue;
-                }
-                let dist = x - value;
-                if dist <= radius {
-                    let point = (value - dist, y);
-                    if !grid.contains(&point) {
-                        grid.insert(point);
-                    }
+                if dist <= radius && !grid.contains(&point) {
+                    grid.insert(point);
                 }
             }
         }
