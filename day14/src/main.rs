@@ -44,7 +44,53 @@ fn part1() {
     println!("part1 {}", max - min);
 }
 
-fn part2() {}
+fn part2() {
+    let mut lines = get_lines_from_file("input");
+    let pattern = lines.next().unwrap().unwrap();
+    let mut rules: HashMap<String, char> = Default::default();
+    for line in lines.map(Result::unwrap).filter(|x| !x.is_empty()) {
+        let [key, value]: [String; 2] = line
+            .split(" -> ")
+            .map(String::from)
+            .collect::<Vec<String>>()
+            .try_into()
+            .unwrap();
+        rules.insert(key, value.chars().next().unwrap());
+    }
+    let mut freq: HashMap<String, usize> = Default::default();
+    for i in 0..(pattern.len() - 1) {
+        let pair = String::from(&pattern[i..=i + 1]);
+        *freq.entry(pair).or_default() += 1;
+    }
+    for _ in 0..40 {
+        let mut new_freq = freq.clone();
+        for (pair, f) in freq {
+            let c = *rules.get(&pair).unwrap();
+            let next_pair_1: String = [pair.chars().next().unwrap(), c].iter().collect();
+            let next_pair_2: String = [c, pair.chars().nth(1).unwrap()].iter().collect();
+            *new_freq.entry(pair).or_default() -= f;
+            *new_freq.entry(next_pair_1).or_default() += f;
+            *new_freq.entry(next_pair_2).or_default() += f;
+        }
+        freq = new_freq;
+    }
+    let mut flat_freq: HashMap<char, usize> = Default::default();
+    for (pair, f) in freq {
+        let [c1, c2]: [char; 2] = pair.chars().collect::<Vec<char>>().try_into().unwrap();
+        *flat_freq.entry(c1).or_default() += f;
+        *flat_freq.entry(c2).or_default() += f;
+    }
+    *flat_freq
+        .entry(pattern.chars().next().unwrap())
+        .or_default() += 1;
+    *flat_freq
+        .entry(pattern.chars().last().unwrap())
+        .or_default() += 1;
+    let count_freq: Vec<usize> = flat_freq.iter().map(|(_, f)| *f / 2).collect();
+    let max = *count_freq.iter().max().unwrap();
+    let min = *count_freq.iter().min().unwrap();
+    println!("part2 {:?}", max - min);
+}
 
 fn main() {
     part1();
