@@ -184,7 +184,7 @@ fn part2() {
             }
             graph.push(edges);
         }
-    } //
+    }
     let min_path_risk = shortest_path(&graph, 0, graph.len() - 1).unwrap();
     println!("part2 {}", min_path_risk);
 }
