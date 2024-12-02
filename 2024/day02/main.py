@@ -54,13 +54,11 @@ def part2(input):
     
     safe = [False] * len(reports)
     for i, report in enumerate(reports):
-        big_spike, all_decreasing, all_increasing = get_report_criteria(report)
-        if is_safe(big_spike, all_decreasing, all_increasing):
+        if is_safe(*get_report_criteria(report)):
             safe[i] = True
         else:
             for j in range(len(report)):
-                big_spike, all_decreasing, all_increasing = get_report_criteria(report, j)
-                if is_safe(big_spike, all_decreasing, all_increasing):
+                if is_safe(*get_report_criteria(report, skip=j)):
                     safe[i] = True
                     break
                     
