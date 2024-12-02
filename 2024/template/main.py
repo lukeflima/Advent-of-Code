@@ -1,6 +1,8 @@
 import argparse
 import os
 import os.path
+from pathlib import Path
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -23,6 +25,8 @@ def main():
     with open(os.path.join(os.path.dirname(__file__), "template", "main.py")) as template, \
          open(os.path.join(day_folder, "main.py"), "w") as newfile:
         newfile.write(template.read())
+    Path(os.path.join(day_folder, "inputtest.txt")).touch()
+    Path(os.path.join(day_folder, "input.txt")).touch()
 
     return 0
 
