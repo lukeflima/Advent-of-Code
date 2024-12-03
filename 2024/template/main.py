@@ -1,5 +1,11 @@
 import argparse
+import os
 from pathlib import Path
+
+import requests
+from dotenv import load_dotenv
+
+load_dotenv() 
 
 
 def main():
@@ -23,10 +29,19 @@ def main():
     with open(Path(Path(__file__).parent, "template", "main.py")) as template, \
          open(Path(day_folder, "main.py"), "w") as newfile:
         newfile.write(template.read())
-    Path(day_folder, "inputtest.txt").touch()
-    Path(day_folder, "input.txt").touch()
+
+    Path(day_folder, "inputtest.txt").touch() 
+
+    input_path = Path(day_folder, "input.txt")
+    r = requests.get(f"https://adventofcode.com/2024/day/{day}/input", cookies={"session": os.getenv("SESSION_ID")})
+    if r.status_code == 200:
+        with open(input_path, "w") as input:
+            input.write(r.text)
+    else:
+        input_path.touch()
 
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
