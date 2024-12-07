@@ -7,18 +7,15 @@ def part1(input: str):
     calibrations = get_calibrations(input)
     res = 0
     for ans, nums in calibrations:
-        head = [nums[0], None, None]
-        leafs = [head]
+        leafs = [nums[0]]
         for num in nums[1:]:
             new_leafs = []
             while len(leafs) > 0:
                 value = leafs.pop()
-                value[1] = [value[0] + num, None, None]
-                value[2] = [value[0] * num, None, None]
-                new_leafs.append(value[1])
-                new_leafs.append(value[2])
-            leafs.extend(new_leafs)
-        if any([i[0] == ans for i in leafs]):
+                new_leafs.append(value + num)
+                new_leafs.append(value * num)
+            leafs = new_leafs
+        if any([i == ans for i in leafs]):
             res += ans
     print("Part 1:", res)
     return 0
@@ -27,20 +24,16 @@ def part2(input: str):
     calibrations = get_calibrations(input)
     res = 0
     for ans, nums in calibrations:
-        head = [nums[0], None, None, None]
-        leafs = [head]
+        leafs = [nums[0]]
         for num in nums[1:]:
             new_leafs = []
             while len(leafs) > 0:
                 value = leafs.pop()
-                value[1] = [value[0] + num, None, None, None]
-                value[2] = [value[0] * num, None, None, None]
-                value[3] = [int(str(value[0]) + str(num)), None, None, None]
-                new_leafs.append(value[1])
-                new_leafs.append(value[2])
-                new_leafs.append(value[3])
-            leafs.extend(new_leafs)
-        if any([i[0] == ans for i in leafs]):
+                new_leafs.append(value + num)
+                new_leafs.append(value * num)
+                new_leafs.append(int(str(value) + str(num)))
+            leafs = new_leafs
+        if any([i == ans for i in leafs]):
             res += ans
     print("Part 2:", res)
     return 0
