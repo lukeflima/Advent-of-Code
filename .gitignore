@@ -1,2 +1,5 @@
 .vscode/launch.json
 .env
+**/input.txt
+**/inputtest.txt
+**/input
