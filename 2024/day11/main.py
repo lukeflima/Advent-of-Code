@@ -23,56 +23,26 @@ def part1(input: str):
 
     return 0
 
+
+@lru_cache(maxsize=None)
+def rule(stone, rounds):
+    result = 0
+    if rounds == 0:
+        return 1
+    if stone == 0:
+        result = rule(1, rounds-1)
+    elif len(str(stone))%2 == 0:
+        mid_point = len(str(stone))//2
+        result += rule(int(str(stone)[:mid_point]), rounds - 1)
+        result += rule(int(str(stone)[mid_point:]), rounds - 1)
+    else:
+        result = rule(stone * 2024, rounds - 1)
+    return result
+
+
 def part2(input: str):
-    original_input = input
-
-    # GEN MAP
-    # map_digit_to_rounds: dict[int, dict[int, int]] = defaultdict(dict)
-    # for digit in range(10):
-    #     print(digit)
-    #     input = str(digit)
-    #     map_digit_to_rounds[digit][0] = 1
-    #     stones = list(map(int, get_stones(input)))
-    #     for i in range(0, 45):
-    #         new_stones = []
-    #         for stone in stones:                    
-    #             stone_str = str(stone)
-    #             if stone == 0:
-    #                 new_stones.append(1)
-    #             elif len(stone_str)%2 == 0:
-    #                 mid_point = len(stone_str)//2
-    #                 new_stones.append(int(stone_str[:mid_point]))
-    #                 new_stones.append(int(stone_str[mid_point:]))
-    #             else:
-    #                 new_stones.append(stone * 2024)
-    #         map_digit_to_rounds[digit][i + 1] = len(new_stones)
-    #         stones = new_stones
-    # json.dump(map_digit_to_rounds, open("map.json", "w"))
-
-    map_digit_to_rounds = json.load(open("map.json"))
-    map_digit_to_rounds = {int(k):{int(k1):v1 for k1,v1 in v.items()} for k,v in map_digit_to_rounds.items()}
-    stones = list(map(int, get_stones(original_input)))
-    digits = []
-    rounds = 75
-    for i in range(0, rounds):
-        new_stones = []
-        for stone in stones:
-            if stone in map_digit_to_rounds and rounds - i in map_digit_to_rounds[stone] :
-                digits.append((stone, i))
-                continue
-            stone_str = str(stone)
-            if stone == 0:
-                new_stones.append(1)
-            elif len(stone_str)%2 == 0:
-                mid_point = len(stone_str)//2
-                new_stones.append(int(stone_str[:mid_point]))
-                new_stones.append(int(stone_str[mid_point:]))
-            else:
-                new_stones.append(stone * 2024)
-        stones = new_stones
-
-
-    print("Part 2:", len(stones) + sum(map_digit_to_rounds[d][i - j + 1] for d, j in digits))
+    stones = list(map(int, get_stones(input)))
+    print("Part 2:", sum(rule(stone, 75) for stone in stones))
     return 0
 
 def main():
