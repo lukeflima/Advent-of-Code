@@ -1,5 +1,4 @@
-from heapq import heappop, heappush
-
+from collections import deque
 
 def get_bytes(input: str):
     return [tuple(map(int, line.split(",")))[::-1] for line in input.splitlines()]
@@ -16,11 +15,11 @@ def part1(input: str):
         grid[i][j] = "#"
 
     dirs = [(0, 1), (-1, 0), (0, -1), (1, 0)]
-    heap = [(0, (0,0))]
+    stack = deque([(0, (0,0))])
     seen = set()
     res = 0
-    while len(heap) > 0:
-        cur, pos = heappop(heap)
+    while len(stack) > 0:
+        cur, pos = stack.popleft()
         if pos in seen:
             continue
         seen.add(pos)
@@ -31,7 +30,7 @@ def part1(input: str):
             npos = add_tuple(pos, dir)
             nx, ny = npos
             if 0 <= nx < width and 0 <= ny < height and grid[nx][ny] == ".":
-                heappush(heap, (cur + 1, npos))
+               stack.append((cur + 1, npos))
 
     print("Part 1:", res)
     return 0
@@ -39,38 +38,41 @@ def part1(input: str):
 def part2(input: str):
     bytes = get_bytes(input)
     width = height = 71
-    max_bytes = 1024
-    grid = [["." for _ in range(height)] for _ in range(width)]
     
-    for (i, j) in bytes[:max_bytes]:
-        grid[i][j] = "#"
+    def connected(max_bytes):
+        grid = [["." for _ in range(height)] for _ in range(width)]
+        for (i, j) in bytes[:max_bytes]:
+            grid[i][j] = "#"
 
-    dirs = [(0, 1), (-1, 0), (0, -1), (1, 0)]
-
-    cur_byte = max_bytes
-    res = -1
-    while res != 0:
-        # print(cur_byte)
-        nbx, nby = bytes[cur_byte]
-        grid[nbx][nby] = "#"
-        heap = [(0, (0,0))]
+        dirs = [(0, 1), (-1, 0), (0, -1), (1, 0)]    
+        stack = deque([(0,0)])
         seen = set()
-        res = 0
-        while len(heap) > 0:
-            cur, pos = heappop(heap)
+        while len(stack) > 0:
+            pos = stack.popleft()
             if pos in seen:
                 continue
             seen.add(pos)
             if pos == (width - 1, height - 1):
-                res = cur 
+                return True
                 break
             for dir in dirs:
                 npos = add_tuple(pos, dir)
                 nx, ny = npos
                 if 0 <= nx < width and 0 <= ny < height and grid[nx][ny] == ".":
-                    heappush(heap, (cur + 1, npos))
-        cur_byte += 1
-    rx, ry = bytes[cur_byte - 1][::-1]
+                    stack.append(npos)
+        return False
+    
+    # binary search
+    lo = 0
+    hi = len(bytes) - 1
+    while lo < hi:
+        mi = (lo + hi)//2
+        if connected(mi + 1):
+            lo = mi + 1
+        else:
+            hi = mi
+    
+    rx, ry = bytes[lo][::-1]
     print("Part 2:", f"{rx},{ry}")
     return 0
 
