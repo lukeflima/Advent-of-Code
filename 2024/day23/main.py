@@ -1,7 +1,5 @@
 from collections import defaultdict
-from functools import partial
 from itertools import combinations
-import networkx as nx
 
 def get_graph(input: str):
     graph: dict[str, set[str]] = defaultdict(set)
