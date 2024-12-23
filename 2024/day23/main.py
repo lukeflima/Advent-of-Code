@@ -1,4 +1,5 @@
 from collections import defaultdict
+from functools import partial
 from itertools import combinations
 import networkx as nx
 
@@ -23,17 +24,29 @@ def part1(input: str):
     print("Part 1:", len(conected_triple))
     return 0
 
+
+def _find_cliques(graph, node, cliques, clique):
+    password = tuple(sorted(clique))
+    if password in cliques: return
+    cliques.add(password)
+
+    for neigh in graph[node]:
+        neigh_neighs = graph[neigh]
+        if neigh not in clique and all(n in neigh_neighs for n in clique):
+            _find_cliques(graph, neigh, cliques, {*clique, neigh})
+
+def find_cliques(graph, node):
+    cliques = set()
+    _find_cliques(graph, node, cliques, {node}) 
+    return cliques
+
+
 def part2(input: str):
-    graph = nx.Graph()
-    for line in input.splitlines():
-        [left, right] = line.split("-")
-        graph.add_node(left)
-        graph.add_node(right)
-        graph.add_edge(left, right)
-        graph.add_edge(right, left)
-    
-    cycles = nx.find_cliques(graph)
-    largest = sorted(set(max(cycles, key=len)))
+    graph = get_graph(input)
+    cliques = set()
+    for node in graph:
+        cliques |= find_cliques(graph, node)    
+    largest = max((c for c in cliques if any(n for n in c if n.startswith("t"))), key=len)
     print("Part 2:", ','.join(largest))
     return 0
 
