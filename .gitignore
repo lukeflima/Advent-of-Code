@@ -1,5 +1,6 @@
-.vscode/launch.json
+.vscode/
 .env
 **/input.txt
 **/inputtest.txt
 **/input
+**/sample
