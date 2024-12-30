@@ -20,7 +20,7 @@ fn _snail_to_string(snail: &mut Snail) -> String {
             str += &n.to_string();
         }
     }
-    return str;
+    str
 }   
 
 fn parse(s: Vec<char>) -> (Snail, usize) {
@@ -45,7 +45,7 @@ fn parse(s: Vec<char>) -> (Snail, usize) {
             }
         }
     }
-    return (res, read);
+    (res, read)
 }
 
 fn propagate(snail: &mut Snail, value: i64, is_left: bool) {
@@ -57,15 +57,13 @@ fn propagate(snail: &mut Snail, value: i64, is_left: bool) {
                 propagate(left, value, is_left);
             }
         } 
-    } else {
-        if let Snail::Pair(_, right) = snail {
-            if let Snail::Num(r) = **right {
-                **right = Snail::Num(r + value);
-            } else {
-                propagate(right, value, is_left);
-            }
-        } 
-    }
+    } else if let Snail::Pair(_, right) = snail {
+        if let Snail::Num(r) = **right {
+            **right = Snail::Num(r + value);
+        } else {
+            propagate(right, value, is_left);
+        }
+    } 
 }
 
 fn both_negatives(snail: &Snail) -> bool {
@@ -74,7 +72,7 @@ fn both_negatives(snail: &Snail) -> bool {
             return true;
         }
     }
-    return false;
+    false
 }
 fn one_negative(snail: &Snail) -> bool {
     if let Snail::Pair(l, r ) = snail {
@@ -85,7 +83,7 @@ fn one_negative(snail: &Snail) -> bool {
             return true;
         }
     }
-    return false;
+    false
 }
 
 fn explode(snail: &mut Snail, depth: usize) -> Option<Snail> {
@@ -142,7 +140,7 @@ fn explode(snail: &mut Snail, depth: usize) -> Option<Snail> {
             return Some(snail.clone());
         }
     }
-    return None;
+    None
 }
 
 fn split(snail: &mut Snail) -> bool{
@@ -157,10 +155,8 @@ fn split(snail: &mut Snail) -> bool{
                 return true;
             }
         }
-        else {
-            if split(left) {
+        else if split(left) {
                 return true
-            };
         }
         if let Snail::Num(r) = **right {
             if r >= 10 {
@@ -173,13 +169,11 @@ fn split(snail: &mut Snail) -> bool{
             }
 
         }
-        else {
-            if split(right) {
-                return true
-            };
-        }
+        else if split(right) {
+            return true
+        };
     }
-    return false;
+    false
 }
 
 fn adjust(snail: &mut Snail) {
@@ -200,7 +194,7 @@ fn adjust(snail: &mut Snail) {
 fn magnitude(snail: &Snail) -> i64 {
     match snail {
         Snail::Num(n) => *n,
-        Snail::Pair(left, right) => 3 * magnitude(&left) + 2 * magnitude(&right),
+        Snail::Pair(left, right) => 3 * magnitude(left) + 2 * magnitude(right),
     }
 }
 
