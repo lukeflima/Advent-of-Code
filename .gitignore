@@ -4,3 +4,5 @@
 **/inputtest.txt
 **/input
 **/sample
+zig-out
+.zig-cache
