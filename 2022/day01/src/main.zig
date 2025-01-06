@@ -8,9 +8,9 @@ fn read_input(input_file_name: []const u8, allocator: Allocator) ![]u8 {
     return input_file.readToEndAlloc(allocator, 4096 * 1024);
 }
 
-fn part1() !void {
+fn part1(input_file_name: []const u8) !void {
     const allocator = std.heap.page_allocator;
-    const input = try read_input("input.txt", allocator);
+    const input = try read_input(input_file_name, allocator);
     defer allocator.free(input);
 
     var blocks = std.mem.split(u8, input, "\n\n");
@@ -26,9 +26,9 @@ fn part1() !void {
     }
     std.debug.print("Part 1: {d}\n", .{max_calories});
 }
-fn part2() !void {
+fn part2(input_file_name: []const u8) !void {
     const allocator = std.heap.page_allocator;
-    const input = try read_input("input.txt", allocator);
+    const input = try read_input(input_file_name, allocator);
     defer allocator.free(input);
 
     var blocks = std.mem.split(u8, input, "\n\n");
@@ -48,6 +48,7 @@ fn part2() !void {
     std.debug.print("Part 2: {d}\n", .{res});
 }
 pub fn main() !void {
-    try part1();
-    try part2();
+    const input_file = "input.txt";
+    try part1(input_file);
+    try part2(input_file);
 }
