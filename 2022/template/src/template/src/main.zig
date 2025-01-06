@@ -15,6 +15,7 @@ fn part1(input_file_name: []const u8) !void {
 
     std.debug.print("Part 1: {d}\n", .{0});
 }
+
 fn part2(input_file_name: []const u8) !void {
     const allocator = std.heap.page_allocator;
     const input = std.mem.trim(u8, try read_input(input_file_name, allocator), "\n");
@@ -22,6 +23,7 @@ fn part2(input_file_name: []const u8) !void {
 
     std.debug.print("Part 2: {d}\n", .{0});
 }
+
 pub fn main() !void {
     const input_file = "sample.txt";
     // const input_file = "input.txt";
