@@ -49,16 +49,20 @@ fn part1(input_file_name: []const u8, num_stacks: usize) !void {
         _ = tokens.next(); // to
         const to: usize = try std.fmt.parseInt(usize, tokens.next().?, 10) - 1;
         for (0..n) |_| {
-            try stacks.items[to].append(stacks.items[from].pop());
+            var to_stack: *std.ArrayList(u8) = &stacks.items[to];
+            var from_stack: *std.ArrayList(u8) = &stacks.items[from];
+            try to_stack.append(from_stack.pop());
         }
     }
     var stacks_top = try std.ArrayList(u8).initCapacity(allocator, num_stacks);
     defer stacks_top.deinit();
     for (0..num_stacks) |i| {
-        try stacks_top.append(stacks.items[i].pop());
+        const s: *std.ArrayList(u8) = &stacks.items[i];
+        try stacks_top.append(s.pop());
     }
     std.debug.print("Part 1: {s}\n", .{stacks_top.items});
 }
+
 fn part2(input_file_name: []const u8, num_stacks: usize) !void {
     const allocator = std.heap.page_allocator;
     const input = std.mem.trim(u8, try read_input(input_file_name, allocator), "\n");
@@ -99,18 +103,22 @@ fn part2(input_file_name: []const u8, num_stacks: usize) !void {
         const from: usize = try std.fmt.parseInt(usize, tokens.next().?, 10) - 1;
         _ = tokens.next(); // to
         const to: usize = try std.fmt.parseInt(usize, tokens.next().?, 10) - 1;
-        const index = stacks.items[from].items.len - n;
-        try stacks.items[to].appendSlice(stacks.items[from].items[index..]);
-        stacks.items[from].shrinkRetainingCapacity(index);
+        var to_stack: *std.ArrayList(u8) = &stacks.items[to];
+        var from_stack: *std.ArrayList(u8) = &stacks.items[from];
+        const index = from_stack.items.len - n;
+        try to_stack.appendSlice(from_stack.items[index..]);
+        from_stack.shrinkRetainingCapacity(index);
     }
     var stacks_top = try std.ArrayList(u8).initCapacity(allocator, num_stacks);
     defer stacks_top.deinit();
     for (0..num_stacks) |i| {
-        try stacks_top.append(stacks.items[i].pop());
+        const s: *std.ArrayList(u8) = &stacks.items[i];
+        try stacks_top.append(s.pop());
     }
 
     std.debug.print("Part 2: {s}\n", .{stacks_top.items});
 }
+
 pub fn main() !void {
     // const input_file = "sample.txt";
     // const num_stack = 3;
