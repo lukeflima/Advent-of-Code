@@ -4,5 +4,7 @@
 **/inputtest.txt
 **/input
 **/sample
+**/sample.txt
 zig-out
 .zig-cache
+create_day
