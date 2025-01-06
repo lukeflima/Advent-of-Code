@@ -49,30 +49,25 @@ fn part2(input_file_name: []const u8) !void {
             break;
         }
         const elfs = [3][]const u8{ elf_option.?, lines.next().?, lines.next().? };
+
         const hashmap = std.AutoHashMap(u8, u8);
-        var maps = std.ArrayList(hashmap).init(allocator);
+        var freqs = hashmap.init(allocator);
+        defer freqs.deinit();
         for (elfs) |elf| {
             var map = hashmap.init(allocator);
+            defer map.deinit();
             for (elf) |c| {
-                try map.put(c, 1);
-            }
-            try maps.append(map);
-        }
-
-        var norepeat = hashmap.init(allocator);
-        defer norepeat.deinit();
-        for (maps.items) |map| {
-            var iterator = map.iterator();
-            while (iterator.next()) |entry| {
-                const item = entry.key_ptr.*;
-                if (norepeat.contains(item)) {
-                    try norepeat.put(item, norepeat.get(item).? + 1);
-                } else {
-                    try norepeat.put(item, 1);
+                if (!map.contains(c)) {
+                    try map.put(c, 1);
+                    if (freqs.contains(c)) {
+                        try freqs.put(c, freqs.get(c).? + 1);
+                    } else {
+                        try freqs.put(c, 1);
+                    }
                 }
             }
         }
-        var iterator = norepeat.iterator();
+        var iterator = freqs.iterator();
         while (iterator.next()) |entry| {
             if (entry.value_ptr.* == 3) {
                 const item = entry.key_ptr.*;
