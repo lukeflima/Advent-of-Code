@@ -17,7 +17,7 @@ fn part1() {
     }
     for _ in 0..10 {
         let mut buffer: LinkedList<char> = Default::default();
-        buffer.push_back(pattern.chars().nth(0).unwrap());
+        buffer.push_back(pattern.chars().next().unwrap());
         for i in 0..(pattern.len() - 1) {
             let pair = &pattern[i..=i + 1];
             buffer.push_back(*rules.get(pair).unwrap());
@@ -31,16 +31,10 @@ fn part1() {
             *m.entry(x).or_default() += 1;
             m
         });
-    let max = freq
+    let (min, max) = freq
         .iter()
-        .max_by_key(|(_, v)| *v)
-        .map(|(_, k)| *k)
-        .unwrap();
-    let min = freq
-        .iter()
-        .min_by_key(|(_, v)| *v)
-        .map(|(_, k)| *k)
-        .unwrap();
+        .fold((usize::MAX, 0), |(min, max), (_, v)| (*v.min(&min), *v.max(&max)));
+
     println!("part1 {}", max - min);
 }
 
@@ -86,9 +80,10 @@ fn part2() {
     *flat_freq
         .entry(pattern.chars().last().unwrap())
         .or_default() += 1;
-    let count_freq: Vec<usize> = flat_freq.iter().map(|(_, f)| *f / 2).collect();
-    let max = *count_freq.iter().max().unwrap();
-    let min = *count_freq.iter().min().unwrap();
+    let count_freq: Vec<usize> = flat_freq.values().map(| f| *f / 2).collect();
+    let (min, max) = count_freq
+        .iter()
+        .fold((usize::MAX, 0), |(min, max), v| (*v.min(&min), *v.max(&max)));
     println!("part2 {:?}", max - min);
 }
 
