@@ -4,7 +4,7 @@ fn part1() -> Result<(), std::io::Error> {
     let lines = get_lines_from_file("input");
     let wanted_sizes = [2, 3, 4, 7];
     let mut res: usize = 0;
-    for line in lines.flatten() {
+    for line in lines.map_while(Result::ok) {
         let sizes: Vec<usize> = line
             .split('|')
             .nth(1)
@@ -28,7 +28,7 @@ fn part1() -> Result<(), std::io::Error> {
 fn part2() -> Result<(), std::io::Error> {
     let lines = get_lines_from_file("input");
     let mut res = 0;
-    for line in lines.flatten() {
+    for line in lines.map_while(Result::ok) {
         let mut seven_segment_count = [""; 10];
         let [input, output]: [Vec<&str>; 2] = line
             .split('|')

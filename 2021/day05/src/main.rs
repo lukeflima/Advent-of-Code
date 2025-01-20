@@ -16,8 +16,7 @@ struct Line {
 fn parse_line(line: &str) -> Line {
     let [b_x, b_y, e_x, e_y]: [usize; 4] = line
         .split(" -> ")
-        .map(|s| s.split(',').map(parse_number))
-        .flatten()
+        .flat_map(|s| s.split(',').map(parse_number))
         .collect::<Vec<usize>>()
         .try_into()
         .unwrap();
@@ -58,7 +57,7 @@ fn part1() -> Result<(), std::io::Error> {
     let mut lines: Vec<Line> = Default::default();
     let mut width = 0;
     let mut height = 0;
-    for line in file_lines.filter_map(Result::ok) {
+    for line in file_lines.map_while(Result::ok) {
         let line = parse_line(&line);
         width = max(max(width, line.begin.x + 1), line.end.x + 1);
         height = max(max(height, line.begin.y + 1), line.end.y + 1);
@@ -101,7 +100,7 @@ fn part2() -> Result<(), std::io::Error> {
     let mut lines: Vec<Line> = Default::default();
     let mut width = 0;
     let mut height = 0;
-    for line in file_lines.filter_map(Result::ok) {
+    for line in file_lines.map_while(Result::ok) {
         let line = parse_line(&line);
         width = max(max(width, line.begin.x + 1), line.end.x + 1);
         height = max(max(height, line.begin.y + 1), line.end.y + 1);

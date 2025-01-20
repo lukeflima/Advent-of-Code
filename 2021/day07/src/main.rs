@@ -43,7 +43,7 @@ fn part2() -> Result<(), std::io::Error> {
             let depth = std::cmp::max(*crab, i) - std::cmp::min(*crab, i);
             fuel += depth * (depth + 1) / 2;
         }
-        min_fuel_use_value = std::cmp::min(min_fuel_use_value, fuel as usize);
+        min_fuel_use_value = std::cmp::min(min_fuel_use_value, fuel );
     }
 
     println!("part2 {}", min_fuel_use_value);

@@ -53,8 +53,7 @@ fn part1() {
         .unwrap()
         .chars()
         .map(to_binary)
-        .map(str::chars)
-        .flatten()
+        .flat_map(str::chars)
         .collect();
     let sum_versions = parse_part1(&bits);
     println!("part1 {}", sum_versions);
@@ -246,8 +245,7 @@ fn part2() {
         .unwrap()
         .chars()
         .map(to_binary)
-        .map(str::chars)
-        .flatten()
+        .flat_map(str::chars)
         .collect();
     let packet = parse_packet(&bits);
     let res = solve_packet(&packet);

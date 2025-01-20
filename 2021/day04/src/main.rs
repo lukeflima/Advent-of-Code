@@ -1,5 +1,3 @@
-use core::num;
-
 use utils::{get_string_from_file, parse_number};
 
 #[derive(Debug, Default)]
@@ -57,14 +55,14 @@ fn part1() {
         .unwrap()
         .trim_end()
         .split(",")
-        .map(|f| parse_number(f))
+        .map(parse_number)
         .collect();
 
     let mut boards: Vec<Board> = Default::default();
     for blobs in split {
         let mut board: Board = Default::default();
         for (i, row) in blobs.split("\n").enumerate() {
-            for (j, num) in row.trim().split_whitespace().enumerate() {
+            for (j, num) in row.split_whitespace().enumerate() {
                 board.board[i][j] = parse_number(num);
                 board.marks[i][j] = false;
             }
@@ -74,24 +72,23 @@ fn part1() {
 
     let mut winner = None;
     let mut curr_draw = 0;
-    let boards_size = boards.len();
     loop {
-        for board_index in 0..boards_size {
-            let board = boards[board_index].board.clone();
+        for (board_index, cur_board) in boards.iter_mut().enumerate() {
+            let board = cur_board.board;
             for (i, row) in board.iter().enumerate() {
                 for (j, col) in row.iter().enumerate() {
                     if *col == draws[curr_draw] {
-                        boards[board_index].marks[i][j] = true;
+                        cur_board.marks[i][j] = true;
                     }
                 }
             }
 
-            if boards[board_index].did_won() {
+            if cur_board.did_won() {
                 winner = Some(board_index);
                 break;
             }
         }
-        if let Some(_) = winner {
+        if winner.is_some() {
             break;
         }
         curr_draw += 1;
@@ -108,14 +105,14 @@ fn part2() {
         .unwrap()
         .trim_end()
         .split(",")
-        .map(|f| parse_number(f))
+        .map(parse_number)
         .collect();
 
     let mut boards: Vec<Board> = Default::default();
     for blobs in split {
         let mut board: Board = Default::default();
         for (i, row) in blobs.split("\n").enumerate() {
-            for (j, num) in row.trim().split_whitespace().enumerate() {
+            for (j, num) in row.split_whitespace().enumerate() {
                 board.board[i][j] = parse_number(num);
                 board.marks[i][j] = false;
             }
@@ -126,28 +123,25 @@ fn part2() {
     let mut last_winner = None;
     let mut last_winner_draw = None;
     let mut curr_draw = 0;
-    let boards_size = boards.len();
-    let mut num_winners: usize = 0;
 
     while curr_draw != draws.len() {
-        for board_index in 0..boards_size {
-            if boards[board_index].won {
+        for (board_index, cur_board) in boards.iter_mut().enumerate(){
+            if cur_board.won {
                 continue;
             }
 
-            let board = boards[board_index].board.clone();
+            let board = cur_board.board;
             for (i, row) in board.iter().enumerate() {
                 for (j, col) in row.iter().enumerate() {
                     if *col == draws[curr_draw] {
-                        boards[board_index].marks[i][j] = true;
+                        cur_board.marks[i][j] = true;
                     }
                 }
             }
 
-            if boards[board_index].did_won() {
+            if cur_board.did_won() {
                 last_winner = Some(board_index);
                 last_winner_draw = Some(curr_draw);
-                num_winners += 1;
             }
         }
         curr_draw += 1;

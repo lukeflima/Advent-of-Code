@@ -55,26 +55,21 @@ fn part2() -> Result<(), std::io::Error> {
             let most_commun_bit: Vec<char> = count
                 .into_iter()
                 .map(|c| {
-                    if c > num_lines / 2 {
-                        '1'
-                    } else if c == num_lines / 2 {
-                        '='
-                    } else {
-                        '0'
+                    match c.cmp(&(num_lines/2)) {
+                        std::cmp::Ordering::Greater => '1',
+                        std::cmp::Ordering::Equal => '=',
+                        std::cmp::Ordering::Less => '0',
                     }
                 })
                 .collect();
-            co2_list = co2_list
-                .into_iter()
-                .filter(|s| {
+            co2_list.retain(|s| {
                     let most = most_commun_bit[bit];
                     let c = s.chars().nth(bit).unwrap();
                     if most == '=' {
                         return c == '0';
                     }
                     c == most
-                })
-                .collect();
+                });
             bit += 1;
         }
         usize::from_str_radix(&co2_list[0], 2).unwrap()
@@ -94,26 +89,21 @@ fn part2() -> Result<(), std::io::Error> {
             let most_commun_bit: Vec<char> = count
                 .into_iter()
                 .map(|c| {
-                    if c > num_lines / 2 {
-                        '1'
-                    } else if c == num_lines / 2 {
-                        '='
-                    } else {
-                        '0'
+                    match c.cmp(&(num_lines/2)) {
+                        std::cmp::Ordering::Greater => '1',
+                        std::cmp::Ordering::Equal => '=',
+                        std::cmp::Ordering::Less => '0',
                     }
                 })
                 .collect();
-            oxygen_list = oxygen_list
-                .into_iter()
-                .filter(|s| {
+            oxygen_list.retain(|s| {
                     let most = most_commun_bit[bit];
                     let c = s.chars().nth(bit).unwrap();
                     if most == '=' {
                         return c == '1';
                     }
                     c != most
-                })
-                .collect();
+                });
             bit += 1;
         }
         usize::from_str_radix(&oxygen_list[0], 2).unwrap()

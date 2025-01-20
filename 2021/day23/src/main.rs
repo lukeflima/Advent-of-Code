@@ -3,6 +3,7 @@
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
+use std::fmt;
 
 /// Solves the Day 23 Part 1 puzzle with respect to the given input.
 pub fn part_1(input: String) {
@@ -224,10 +225,8 @@ fn solve(start: State) -> Option<usize> {
 
         for next_state in get_next_states(&state) {
             let repr = next_state.to_string();
-            if costs.contains_key(&repr) {
-                if next_state.cost >= *costs.get(&repr).unwrap() {
-                    continue;
-                }
+            if costs.contains_key(&repr) && next_state.cost >= *costs.get(&repr).unwrap() {
+                continue;
             }
 
             heap.push(next_state);
@@ -260,9 +259,16 @@ impl PartialOrd for State {
     }
 }
 
+
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s: String = self.to_chars().iter().collect();
+        write!(f, "{}", s)
+    }
+}
 impl State {
     /// Converts this state into an array of characters.
-    fn to_chars(&self) -> [char; 27] {
+    fn to_chars(self) -> [char; 27] {
         let mut chars: [char; 27] = ['.'; 27];
         for pod in self.pods {
             chars[pod.pos] = pod.clr;
@@ -270,10 +276,6 @@ impl State {
         chars
     }
 
-    /// Converts this state into a string.
-    fn to_string(&self) -> String {
-        self.to_chars().iter().collect()
-    }
 
     /// Draws a (colourful!) representation of the given state.
     #[allow(dead_code)]
@@ -345,13 +347,13 @@ fn get_next_states(state: &State) -> Vec<State> {
         }
 
         if pod.pos <= 10 {
-            if let Some(next_state) = get_next_state_from_hallway(&state, i) {
+            if let Some(next_state) = get_next_state_from_hallway(state, i) {
                 next_states.push(next_state);
             }
             continue;
         }
 
-        for next_state in get_next_state_from_room(&state, i) {
+        for next_state in get_next_state_from_room(state, i) {
             next_states.push(next_state);
         }
     }
@@ -377,18 +379,17 @@ fn get_next_state_from_hallway(state: &State, index: usize) -> Option<State> {
         return None;
     }
 
-    let path;
-    if pod.pos < door {
-        path = (pod.pos + 1)..door;
+    let path = if pod.pos < door {
+        (pod.pos + 1)..door
     } else {
-        path = door..pod.pos;
-    }
+        door..pod.pos
+    };
 
     if !chars[path].iter().all(is_dot) {
         return None;
     }
 
-    let mut next_pods: [Pod; 16] = state.pods.clone();
+    let mut next_pods: [Pod; 16] = state.pods;
     let next_slot = chars[beg..end].iter().rposition(is_dot).unwrap();
     let next_pos = beg + next_slot;
     next_pods[index] = Pod {
@@ -399,10 +400,10 @@ fn get_next_state_from_hallway(state: &State, index: usize) -> Option<State> {
 
     let next_cost = state.cost + pod.energy() * dist(pod.pos, next_pos);
 
-    return Some(State {
+    Some(State {
         cost: next_cost,
         pods: next_pods,
-    });
+    })
 }
 
 /// Returns all the successors to the given state where the provided room pod moves.
@@ -424,16 +425,16 @@ fn get_next_state_from_room(state: &State, index: usize) -> Vec<State> {
 
     let mut next_states = Vec::new();
 
-    for pos in door + 1..11 {
-        if chars[pos] != '.' {
+    for (pos, char) in chars.iter().enumerate().take(11).skip(door + 1)  {
+        if *char != '.' {
             break;
         } else if pos == 2 || pos == 4 || pos == 6 || pos == 8 {
             continue;
         }
 
-        let mut next_pods: [Pod; 16] = state.pods.clone();
+        let mut next_pods: [Pod; 16] = state.pods;
         next_pods[index] = Pod {
-            pos: pos,
+            pos,
             clr: pod.clr,
             fin: false,
         };
@@ -454,9 +455,9 @@ fn get_next_state_from_room(state: &State, index: usize) -> Vec<State> {
             continue;
         }
 
-        let mut next_pods: [Pod; 16] = state.pods.clone();
+        let mut next_pods: [Pod; 16] = state.pods;
         next_pods[index] = Pod {
-            pos: pos,
+            pos,
             clr: pod.clr,
             fin: false,
         };
@@ -478,8 +479,8 @@ fn dist(pos_1: usize, pos_2: usize) -> usize {
     let (r1, c1) = coords(pos_1);
     let (r2, c2) = coords(pos_2);
 
-    let dr = (r1 as isize - r2 as isize).abs() as usize;
-    let dc = (c1 as isize - c2 as isize).abs() as usize;
+    let dr = (r1 as isize - r2 as isize).unsigned_abs();
+    let dc = (c1 as isize - c2 as isize).unsigned_abs();
     dr + dc
 }
 

@@ -25,8 +25,7 @@ fn part1() {
     let mut paths: usize = 0;
     let mut unfinesh_paths: Vec<Vec<String>> = vec![vec![String::from("start")]];
 
-    while !unfinesh_paths.is_empty() {
-        let path = unfinesh_paths.pop().unwrap();
+    while let Some(path) = unfinesh_paths.pop() {
         if path.last().unwrap() == "end" {
             paths += 1;
             continue;
@@ -67,8 +66,7 @@ fn part2() {
     let mut paths: usize = 0;
     let mut unfinesh_paths: Vec<(Vec<String>, bool)> = vec![(vec![String::from("start")], false)];
 
-    while !unfinesh_paths.is_empty() {
-        let (path, small_cave_revisit) = unfinesh_paths.pop().unwrap();
+    while let Some((path, small_cave_revisit)) = unfinesh_paths.pop()  {
         if path.last().unwrap() == "end" {
             paths += 1;
             continue;
