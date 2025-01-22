@@ -5,9 +5,9 @@ const fs = std.fs;
 const StringArrayList = std.ArrayList([]const u8);
 
 const Valve = struct {
-    name: []const u8,
+    name: u16,
     flow_rate: usize,
-    tunnels: StringArrayList,
+    tunnels: std.ArrayList(u16),
 
     const Self = @This();
 
@@ -29,50 +29,31 @@ const State = struct {
     }
 };
 
-fn compare_state(_: void, a: State, b: State) std.math.Order {
-    return std.math.order(a.pressure, b.pressure).invert();
-}
-
-fn contains(list: StringArrayList, value: []const u8) bool {
-    for (list.items) |item| {
-        if (std.mem.eql(u8, item, value)) return true;
-    }
-    return false;
-}
-
 fn read_input(input_file_name: []const u8, allocator: Allocator) ![]u8 {
     const input_file = try fs.cwd().openFile(input_file_name, .{});
     defer input_file.close();
     return input_file.readToEndAlloc(allocator, 4 * 1024 * 1024);
 }
 
-fn compareStrings(_: void, lhs: []const u8, rhs: []const u8) bool {
-    return std.mem.order(u8, lhs, rhs).compare(std.math.CompareOperator.lt);
-}
+const ValveMap = std.AutoHashMap(u16, Valve);
+const ValveDistMap = std.AutoHashMap(u16, std.AutoHashMap(u16, usize));
+const Flow = struct { remaining: usize, valve_name: u16, opened: u64 = 0 };
+const MemoMap = std.AutoHashMap(Flow, usize);
 
-fn indexOfString(haystack: [][]const u8, needle: []const u8) ?usize {
-    for (haystack, 0..) |hay, i| {
-        if (std.mem.eql(u8, hay, needle)) return i;
-    }
-    return null;
-}
-
-const ValveMap = std.StringHashMap(Valve);
-const ValveDistMap = std.StringArrayHashMap(std.StringArrayHashMap(usize));
-const Flow = struct { remaining: usize, valve_index: usize, opened: u64 = 0 };
-const MemoMap = std.AutoArrayHashMap(Flow, usize);
-
-fn calculate_max_flow(flow: Flow, valve_names: [][]const u8, indices: *std.StringArrayHashMap(usize), valves: *ValveMap, valves_dists: *ValveDistMap, memo: *MemoMap) !usize {
+fn calculate_max_flow(flow: Flow, indices: *std.AutoHashMap(u16, usize), valves: *ValveMap, valves_dists: *ValveDistMap, memo: *MemoMap) !usize {
     if (memo.contains(flow)) return memo.get(flow).?;
 
-    const valve = valves.get(valve_names[flow.valve_index]).?;
+    const valve = valves.get(flow.valve_name).?;
 
     var max_pressure: usize = 0;
     const dists = valves_dists.get(valve.name).?;
-    for (dists.keys(), dists.values()) |tunnel_name, tunnel_dist| {
+    var dists_iter = dists.iterator();
+    while (dists_iter.next()) |entry| {
+        const tunnel_name = entry.key_ptr.*;
+        const tunnel_dist = entry.value_ptr.*;
+
         const tunnel_bit_index: u6 = @intCast(indices.get(tunnel_name).?);
         const tunnel = valves.get(tunnel_name).?;
-        const tunnel_index = indexOfString(valve_names, tunnel_name).?;
 
         const bit = @as(u64, 1) << tunnel_bit_index;
         if (flow.opened & bit != 0) continue;
@@ -80,14 +61,26 @@ fn calculate_max_flow(flow: Flow, valve_names: [][]const u8, indices: *std.Strin
         if (flow.remaining <= tunnel_dist + 1) continue;
         const time_remaining = flow.remaining - tunnel_dist - 1;
 
-        const next_flow = .{ .valve_index = tunnel_index, .remaining = time_remaining, .opened = flow.opened | bit };
+        const next_flow = .{ .valve_name = tunnel_name, .remaining = time_remaining, .opened = flow.opened | bit };
         const released_pressure = time_remaining * tunnel.flow_rate;
-        const tunnel_pressure = try calculate_max_flow(next_flow, valve_names, indices, valves, valves_dists, memo);
+        const tunnel_pressure = try calculate_max_flow(next_flow, indices, valves, valves_dists, memo);
         max_pressure = @max(max_pressure, released_pressure + tunnel_pressure);
     }
-    // }
+
     try memo.put(flow, max_pressure);
     return max_pressure;
+}
+
+fn calc_id(name: []const u8) u16 {
+    if (name.len > 2) std.debug.print(">2 {s}\n", .{name});
+    std.debug.assert(name.len == 2);
+    return @intCast(name.ptr[0] + @as(u16, name.ptr[1]) * 256);
+}
+
+fn print_id(id: u16) void {
+    const c1: u8 = @intCast(@mod(id, 256));
+    const c2: u8 = @intCast(@divTrunc(id, 256));
+    std.debug.print("{c}{c}\n", .{ c1, c2 });
 }
 
 fn part1(input_file_name: []const u8) !void {
@@ -95,45 +88,44 @@ fn part1(input_file_name: []const u8) !void {
     const input = std.mem.trim(u8, try read_input(input_file_name, allocator), "\n");
     defer allocator.free(input);
 
+    const AA_id: u16 = calc_id("AA");
+
     var valves = ValveMap.init(allocator);
-    var valves_names = std.ArrayList([]const u8).init(allocator);
     var lines = std.mem.split(u8, input, "\n");
     while (lines.next()) |line| {
         var blocks = std.mem.split(u8, line, "; ");
         var valve_str = blocks.next().?;
         const name = valve_str[6..8];
+        const name_id: u16 = calc_id(name);
         const flow_rate = try std.fmt.parseInt(usize, valve_str[23..], 10);
-
-        try valves_names.append(name);
 
         const tunels_str = blocks.next().?;
         var list = std.mem.split(u8, tunels_str[23..], ", ");
-        var tunels = StringArrayList.init(allocator);
+        var tunels = std.ArrayList(u16).init(allocator);
         while (list.next()) |t| {
-            try tunels.append(t);
+            const t_id: u16 = calc_id(t);
+            try tunels.append(t_id);
         }
 
-        try valves.put(name, .{ .name = name, .flow_rate = flow_rate, .tunnels = tunels });
+        try valves.put(name_id, .{ .name = name_id, .flow_rate = flow_rate, .tunnels = tunels });
     }
-
-    std.mem.sort([]const u8, valves_names.items, {}, compareStrings);
 
     var valves_dists = ValveDistMap.init(allocator);
     var valves_iter = valves.valueIterator();
-    var visited = std.StringArrayHashMap(bool).init(allocator);
+    var visited = std.AutoHashMap(u16, bool).init(allocator);
 
-    var non_empty = std.ArrayList([]const u8).init(allocator);
+    var non_empty = std.ArrayList(u16).init(allocator);
     while (valves_iter.next()) |valve| {
         defer visited.clearRetainingCapacity();
 
         if (valve.flow_rate > 0) try non_empty.append(valve.name);
-        if (valve.flow_rate == 0 and !std.mem.eql(u8, valve.name, "AA")) continue;
+        if (valve.flow_rate == 0 and valve.name != AA_id) continue;
 
-        var cur_dists = std.StringArrayHashMap(usize).init(allocator);
+        var cur_dists = std.AutoHashMap(u16, usize).init(allocator);
         try cur_dists.put(valve.name, 0);
-        try cur_dists.put("AA", 0);
+        try cur_dists.put(AA_id, 0);
 
-        var queue = std.ArrayList(struct { dist: usize, valve: []const u8 }).init(allocator);
+        var queue = std.ArrayList(struct { dist: usize, valve: u16 }).init(allocator);
         try queue.append(.{ .dist = 0, .valve = valve.name });
         while (queue.items.len > 0) {
             const state = queue.pop();
@@ -147,29 +139,34 @@ fn part1(input_file_name: []const u8) !void {
                 try queue.insert(0, .{ .dist = state.dist + 1, .valve = tunel });
             }
         }
-        _ = cur_dists.swapRemove(valve.name);
-        _ = cur_dists.swapRemove("AA");
+        _ = cur_dists.remove(valve.name);
+        _ = cur_dists.remove(AA_id);
         try valves_dists.put(valve.name, cur_dists);
     }
 
-    var indices = std.StringArrayHashMap(usize).init(allocator);
+    var indices = std.AutoHashMap(u16, usize).init(allocator);
     for (non_empty.items, 0..) |elem, i| {
         try indices.put(elem, i);
     }
+    _ = valves_dists.get(AA_id).?;
 
     var memo = MemoMap.init(allocator);
-    const res = try calculate_max_flow(.{ .valve_index = 0, .remaining = 30 }, valves_names.items, &indices, &valves, &valves_dists, &memo);
+    const res = try calculate_max_flow(.{ .valve_name = AA_id, .remaining = 30 }, &indices, &valves, &valves_dists, &memo);
 
     std.debug.print("Part 1: {d}\n", .{res});
 }
 
 fn part2(input_file_name: []const u8) !void {
     var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer _ = general_purpose_allocator.deinit();
+    // defer std.debug.assert(general_purpose_allocator.deinit() == .ok);
 
     const allocator = general_purpose_allocator.allocator();
+    const full_input = try read_input(input_file_name, allocator);
+    defer allocator.free(full_input);
 
-    const input = std.mem.trim(u8, try read_input(input_file_name, allocator), "\n");
+    const input = std.mem.trim(u8, full_input, "\n");
+
+    const AA_id: u16 = calc_id("AA");
 
     var valves = ValveMap.init(allocator);
     defer {
@@ -180,47 +177,49 @@ fn part2(input_file_name: []const u8) !void {
 
         valves.deinit();
     }
-    var valves_names = std.ArrayList([]const u8).init(allocator);
-    defer valves_names.deinit();
     var lines = std.mem.split(u8, input, "\n");
     while (lines.next()) |line| {
         var blocks = std.mem.split(u8, line, "; ");
         var valve_str = blocks.next().?;
         const name = valve_str[6..8];
+        const name_id: u16 = calc_id(name);
         const flow_rate = try std.fmt.parseInt(usize, valve_str[23..], 10);
-
-        try valves_names.append(name);
 
         const tunels_str = blocks.next().?;
         var list = std.mem.split(u8, tunels_str[23..], ", ");
-        var tunels = StringArrayList.init(allocator);
+        var tunels = std.ArrayList(u16).init(allocator);
         while (list.next()) |t| {
-            try tunels.append(t);
+            const t_id: u16 = calc_id(t);
+            try tunels.append(t_id);
         }
 
-        try valves.put(name, .{ .name = name, .flow_rate = flow_rate, .tunnels = tunels });
+        try valves.put(name_id, .{ .name = name_id, .flow_rate = flow_rate, .tunnels = tunels });
     }
-
-    std.mem.sort([]const u8, valves_names.items, {}, compareStrings);
 
     var valves_dists = ValveDistMap.init(allocator);
     defer {
+        var valves_dists_iter = valves_dists.iterator();
+        while (valves_dists_iter.next()) |v| {
+            v.value_ptr.deinit();
+        }
         valves_dists.deinit();
     }
     var valves_iter = valves.valueIterator();
-    var visited = std.StringArrayHashMap(bool).init(allocator);
+    var visited = std.AutoHashMap(u16, bool).init(allocator);
 
-    var non_empty = std.ArrayList([]const u8).init(allocator);
+    var non_empty = std.ArrayList(u16).init(allocator);
+    defer non_empty.deinit();
     while (valves_iter.next()) |valve| {
         defer visited.clearRetainingCapacity();
         if (valve.flow_rate > 0) try non_empty.append(valve.name);
-        if (valve.flow_rate == 0 and !std.mem.eql(u8, valve.name, "AA")) continue;
+        if (valve.flow_rate == 0 and valve.name != AA_id) continue;
 
-        var cur_dists = std.StringArrayHashMap(usize).init(allocator);
+        var cur_dists = std.AutoHashMap(u16, usize).init(allocator);
         try cur_dists.put(valve.name, 0);
-        try cur_dists.put("AA", 0);
+        try cur_dists.put(AA_id, 0);
 
-        var queue = std.ArrayList(struct { dist: usize, valve: []const u8 }).init(allocator);
+        var queue = std.ArrayList(struct { dist: usize, valve: u16 }).init(allocator);
+        defer queue.deinit();
         try queue.append(.{ .dist = 0, .valve = valve.name });
         while (queue.items.len > 0) {
             const state = queue.pop();
@@ -234,13 +233,13 @@ fn part2(input_file_name: []const u8) !void {
                 try queue.insert(0, .{ .dist = state.dist + 1, .valve = tunel });
             }
         }
-        _ = cur_dists.swapRemove(valve.name);
-        _ = cur_dists.swapRemove("AA");
+        _ = cur_dists.remove(valve.name);
+        _ = cur_dists.remove(AA_id);
         try valves_dists.put(valve.name, cur_dists);
     }
     visited.deinit();
 
-    var indices = std.StringArrayHashMap(usize).init(allocator);
+    var indices = std.AutoHashMap(u16, usize).init(allocator);
     defer indices.deinit();
     for (non_empty.items, 0..) |elem, i| {
         try indices.put(elem, i);
@@ -249,11 +248,11 @@ fn part2(input_file_name: []const u8) !void {
     var memo = MemoMap.init(allocator);
     defer memo.deinit();
     var res: usize = 0;
-    const bound = (@as(u64, 1) << @intCast(non_empty.items.len)) - 1;
+    const bound = (@as(u16, 1) << @intCast(non_empty.items.len)) - 1;
     const limit: usize = @intCast((bound + 1) / 2);
     for (0..limit) |i| {
-        const me = try calculate_max_flow(.{ .valve_index = 0, .remaining = 26, .opened = i }, valves_names.items, &indices, &valves, &valves_dists, &memo);
-        const elephant = try calculate_max_flow(.{ .valve_index = 0, .remaining = 26, .opened = bound ^ i }, valves_names.items, &indices, &valves, &valves_dists, &memo);
+        const me = try calculate_max_flow(.{ .valve_name = AA_id, .remaining = 26, .opened = i }, &indices, &valves, &valves_dists, &memo);
+        const elephant = try calculate_max_flow(.{ .valve_name = AA_id, .remaining = 26, .opened = bound ^ i }, &indices, &valves, &valves_dists, &memo);
         res = @max(res, me + elephant);
     }
 
