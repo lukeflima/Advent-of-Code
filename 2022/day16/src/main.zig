@@ -35,12 +35,77 @@ fn read_input(input_file_name: []const u8, allocator: Allocator) ![]u8 {
     return input_file.readToEndAlloc(allocator, 4 * 1024 * 1024);
 }
 
-const ValveMap = std.AutoHashMap(u16, Valve);
-const ValveDistMap = std.AutoHashMap(u16, std.AutoHashMap(u16, usize));
-const Flow = struct { remaining: usize, valve_name: u16, opened: u64 = 0 };
-const MemoMap = std.AutoHashMap(Flow, usize);
+fn uint16(input: u16) u16 {
+    var x: u16 = input;
+    x = (x ^ (x >> 7)) *% 0x2993;
+    x = (x ^ (x >> 5)) *% 0xe877;
+    x = (x ^ (x >> 9)) *% 0x0235;
+    x = x ^ (x >> 10);
+    return x;
+}
 
-fn calculate_max_flow(flow: Flow, indices: *std.AutoHashMap(u16, usize), valves: *ValveMap, valves_dists: *ValveDistMap, memo: *MemoMap) !usize {
+const Uint16Contex = struct {
+    const Self = @This();
+    pub fn hash(_: Self, key: u16) u64 {
+        return @intCast(uint16(key));
+    }
+
+    pub fn eql(_: Self, a: u16, b: u16) bool {
+        return a == b;
+    }
+};
+
+pub fn U16HashMap(comptime V: type) type {
+    return std.HashMap(u16, V, Uint16Contex, 80);
+}
+
+/// DEPRECATED: use std.hash.int()
+/// Source: https://github.com/skeeto/hash-prospector
+pub fn uint32(input: u32) u32 {
+    var x: u32 = input;
+    x = (x ^ (x >> 17)) *% 0xed5ad4bb;
+    x = (x ^ (x >> 11)) *% 0xac4c1b51;
+    x = (x ^ (x >> 15)) *% 0x31848bab;
+    x = x ^ (x >> 14);
+    return x;
+}
+
+/// Source: https://github.com/jonmaiga/mx3
+fn uint64(input: u64) u64 {
+    var x: u64 = input;
+    const c = 0xbea225f9eb34556d;
+    x = (x ^ (x >> 32)) *% c;
+    x = (x ^ (x >> 29)) *% c;
+    x = (x ^ (x >> 32)) *% c;
+    x = x ^ (x >> 29);
+    return x;
+}
+
+const ValveMap = U16HashMap(Valve);
+const ValveDistMap = U16HashMap(U16HashMap(usize));
+const Flow = struct {
+    remaining: usize = 0,
+    valve_name: u16 = 0,
+    opened: u64 = 0,
+};
+const FlowContext = struct {
+    const Self = @This();
+    pub fn hash(_: Self, key: Flow) u64 {
+        const valve_name: u128 = @intCast(uint16(key.valve_name));
+        const opened: u128 = @intCast(uint64(key.opened));
+        const remaining: u128 = @intCast(uint64(key.remaining));
+        var h: u128 = @addWithOverflow((valve_name), (opened))[0];
+        h = @addWithOverflow(h, (remaining))[0];
+        return @truncate(h);
+    }
+
+    pub fn eql(_: Self, a: Flow, b: Flow) bool {
+        return a.valve_name == b.valve_name and a.remaining == b.remaining and a.opened == b.opened;
+    }
+};
+const MemoMap = std.HashMap(Flow, usize, FlowContext, 80);
+
+fn calculate_max_flow(flow: Flow, indices: *U16HashMap(usize), valves: *ValveMap, valves_dists: *ValveDistMap, memo: *MemoMap) !usize {
     if (memo.contains(flow)) return memo.get(flow).?;
 
     const valve = valves.get(flow.valve_name).?;
@@ -112,7 +177,7 @@ fn part1(input_file_name: []const u8) !void {
 
     var valves_dists = ValveDistMap.init(allocator);
     var valves_iter = valves.valueIterator();
-    var visited = std.AutoHashMap(u16, bool).init(allocator);
+    var visited = U16HashMap(bool).init(allocator);
 
     var non_empty = std.ArrayList(u16).init(allocator);
     while (valves_iter.next()) |valve| {
@@ -121,7 +186,7 @@ fn part1(input_file_name: []const u8) !void {
         if (valve.flow_rate > 0) try non_empty.append(valve.name);
         if (valve.flow_rate == 0 and valve.name != AA_id) continue;
 
-        var cur_dists = std.AutoHashMap(u16, usize).init(allocator);
+        var cur_dists = U16HashMap(usize).init(allocator);
         try cur_dists.put(valve.name, 0);
         try cur_dists.put(AA_id, 0);
 
@@ -144,7 +209,7 @@ fn part1(input_file_name: []const u8) !void {
         try valves_dists.put(valve.name, cur_dists);
     }
 
-    var indices = std.AutoHashMap(u16, usize).init(allocator);
+    var indices = U16HashMap(usize).init(allocator);
     for (non_empty.items, 0..) |elem, i| {
         try indices.put(elem, i);
     }
@@ -205,7 +270,7 @@ fn part2(input_file_name: []const u8) !void {
         valves_dists.deinit();
     }
     var valves_iter = valves.valueIterator();
-    var visited = std.AutoHashMap(u16, bool).init(allocator);
+    var visited = U16HashMap(bool).init(allocator);
 
     var non_empty = std.ArrayList(u16).init(allocator);
     defer non_empty.deinit();
@@ -214,7 +279,7 @@ fn part2(input_file_name: []const u8) !void {
         if (valve.flow_rate > 0) try non_empty.append(valve.name);
         if (valve.flow_rate == 0 and valve.name != AA_id) continue;
 
-        var cur_dists = std.AutoHashMap(u16, usize).init(allocator);
+        var cur_dists = U16HashMap(usize).init(allocator);
         try cur_dists.put(valve.name, 0);
         try cur_dists.put(AA_id, 0);
 
@@ -239,7 +304,7 @@ fn part2(input_file_name: []const u8) !void {
     }
     visited.deinit();
 
-    var indices = std.AutoHashMap(u16, usize).init(allocator);
+    var indices = U16HashMap(usize).init(allocator);
     defer indices.deinit();
     for (non_empty.items, 0..) |elem, i| {
         try indices.put(elem, i);
