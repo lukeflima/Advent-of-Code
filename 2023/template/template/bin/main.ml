@@ -3,10 +3,9 @@ let read_file filename =
   let rec read_lines acc =
     try
       let line = input_line ic in
-      if acc == "" then
-        read_lines (line)
-      else
-        read_lines (acc ^ "\n" ^ line)
+      match acc with
+      | "" -> read_lines line
+      | _ -> read_lines (acc ^ "\n" ^ line)
     with End_of_file ->
       close_in ic;
       acc
