@@ -19,7 +19,7 @@ let input = "sample.txt"
 (* let input = "input.txt" *)
 
 let () =
-  let input = read_file input in
+  let input = read_file input |> String.trim in
   print_string "Part 1: "; 
   print_endline (part1 input);
   print_string "Part 2: "; 
