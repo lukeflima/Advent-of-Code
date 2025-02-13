@@ -31,6 +31,8 @@ let line_to_row i line =
   let list = line |> String.to_seqi |> List.of_seq in
   List.map (fun (j, c) -> i, j, c) list
 
+let neighbours = [(-1, -1); (-1, 0); (-1, 1); (0, -1); (0, 1); (1, -1); (1, 0); (1, 1)]
+
 let part1 input = 
   let lines = String.split_on_char '\n' input in
   let grid = List.mapi line_to_row lines |> List.flatten in
@@ -39,20 +41,18 @@ let part1 input =
   let nums = parse_numbers grid in
   let is_part (pos, n) = 
     let part acc (i, j) = 
-      if not acc then
-        let is_part = ref false in
-        for di = -1 to 1 do
-          for dj = -1 to 1 do
-            let index = (i + di) * cols + j + dj in
-            if not !is_part && index > 0 && index < grid_len then
-              let _, _, c = List.nth grid index  in
-              if c != '.' && (c < '0' || c > '9') then
-                is_part := true
-          done;
-        done;
-        let res = !is_part in is_part := false;
-        res
-      else acc
+      if acc then acc
+      else
+      let check acc2 (di, dj) =
+        if acc2 then acc2
+        else
+          let index = (i + di) * cols + j + dj in
+          if index > 0 && index < grid_len then
+            let _, _, c = List.nth grid index  in
+            c != '.' && (c < '0' || c > '9')
+          else acc2
+        in
+      List.fold_left check false neighbours
     in
     if List.fold_left part false pos then
       n
@@ -71,7 +71,6 @@ let get_gears grid =
   gears grid []
   
 module PosSet = Set.Make(Int)
-
 let part2 input = 
   let lines = String.split_on_char '\n' input in
   let grid = List.mapi line_to_row lines |> List.flatten in
@@ -80,23 +79,22 @@ let part2 input =
   let add_pos (pos, n) = List.iter (fun i -> Hashtbl.add pos_ht i n) pos in
   List.iter add_pos nums;
   let gears = get_gears grid in
-  let add_gear (i, j) = 
-      let ns = ref PosSet.empty in
-      for di = -1 to 1 do
-        for dj = -1 to 1 do
-          let index = (i + di, j + dj) in
-          let n = Hashtbl.find_opt pos_ht index in
-          if Option.is_some n then
-            ns := PosSet.add (Option.get n) !ns;
-        done;
-      done;
-      let res = if PosSet.cardinal !ns == 2 then
-        PosSet.fold ( * ) !ns 1
-      else 0 in
-      ns := PosSet.empty;
-      res
+  let gear_power (i, j) = 
+    let rec contruct_set neighbours set =
+      match neighbours with
+      | [] -> set
+      | (di, dj)::rest -> 
+        let index = (i + di, j + dj) in
+        match Hashtbl.find_opt pos_ht index with
+        | Some n -> contruct_set rest (PosSet.add n set)
+        | None -> contruct_set rest set
+    in
+    let ns = contruct_set neighbours PosSet.empty in
+    if PosSet.cardinal ns == 2 then
+      PosSet.fold ( * ) ns 1
+    else 0 
   in
-  let res = List.map add_gear gears in
+  let res = List.map gear_power gears in
   List.fold_left (+) 0 res |> Int.to_string
 
 
