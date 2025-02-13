@@ -12,8 +12,8 @@ let read_file filename =
   in
   read_lines ""
 
-let part1 input = input |> String.length |> Int.to_string
-let part2 input = input |> String.length |> Int.to_string
+let part1 input = (input |> String.length) * 0 |> Int.to_string
+let part2 input = (input |> String.length) * 0 |> Int.to_string
 
 let input = "sample.txt"
 (* let input = "input.txt" *)
