@@ -17,6 +17,7 @@ type dir =
   | Right
   | Bottom
   | Left
+
 let _string_of_dir dir = 
   match dir with
   | Top -> "Top"
@@ -30,31 +31,26 @@ let get_dir dir =
   | Right -> (0, 1)
   | Bottom -> (1, 0)
   | Left -> (0, -1)
+
 let get_pipe dirs =
   match dirs with
-  | [Top; Bottom] -> '|'
-  | [Bottom; Top] -> '|'
-  | [Left; Right] -> '-'
-  | [Right;Left] -> '-'
-  | [Top; Right] -> 'L'
-  | [Right; Top] -> 'L'
-  | [Top; Left] -> 'J'
-  | [Left; Top] -> 'J'
-  | [Bottom; Left] -> '7'
-  | [Left; Bottom] -> '7'
-  | [Bottom; Right] -> 'F'
-  | [Right; Bottom] -> 'F'
+  | [Top; Bottom] | [Bottom; Top] -> '|'
+  | [Left; Right] | [Right;Left] -> '-'
+  | [Top; Right] | [Right; Top] -> 'L'
+  | [Top; Left] | [Left; Top] -> 'J'
+  | [Bottom; Left] | [Left; Bottom] -> '7'
+  | [Bottom; Right] | [Right; Bottom] -> 'F'
   | _ -> failwith "Invalid pipe"
 
-  let get_adjs pipe = 
-    match pipe with
-    | '|' -> [get_dir Top; get_dir Bottom]
-    | '-' -> [get_dir Left; get_dir Right]
-    | 'L' -> [get_dir Top; get_dir Right]
-    | 'J' -> [get_dir Top; get_dir Left]
-    | '7' -> [get_dir Bottom; get_dir Left]
-    | 'F' -> [get_dir Bottom; get_dir Right]
-    | _ -> []
+let get_adjs pipe = 
+  match pipe with
+  | '|' -> [get_dir Top; get_dir Bottom]
+  | '-' -> [get_dir Left; get_dir Right]
+  | 'L' -> [get_dir Top; get_dir Right]
+  | 'J' -> [get_dir Top; get_dir Left]
+  | '7' -> [get_dir Bottom; get_dir Left]
+  | 'F' -> [get_dir Bottom; get_dir Right]
+  | _ -> []
 
 let _print_point p = 
   print_string "(";
@@ -64,51 +60,52 @@ let _print_point p =
   print_string ")";
   print_newline ()
 
-let equal_point a b =
-  (fst a) == (fst b) && (snd a) == (snd b)
+let equal_point (ax, ay) (bx, by) =
+  ax == bx && ay == by
 
-let compare_point a b =
-  if (fst a) = (fst b) then (snd a) - (snd b)
-  else (fst a) - (fst b)
-
+let compare_point (ax, ay) (bx, by) =
+  if ax == bx then ay - by
+  else ax - bx
 
 module PointSet = Set.Make(struct
   type t = int * int
   let compare = compare_point
 end)
 
-let range n = List.init n (fun x -> x) 
 let get grid width height i j = 
   if i < 0 || i >= height || j < 0 || j >= width then '.'
   else List.nth (List.nth grid i) j 
 
-let get_p grid width height p = 
-  get grid width height (fst p) (snd p) 
+let get_p grid width height (px, py) = 
+  get grid width height px py
 
-let add_point a b = (fst a + fst b, snd a + snd b)
+let add_point (ax, ay) (bx, by) = (ax + bx, ay + by)
+
 let is_connected a b grid width height =
   let pipe = get_p grid width height b in
   let adjs = get_adjs pipe in
   let adjs_points = List.map (fun d -> add_point b d) adjs in
   List.fold_left (fun acc p -> acc || equal_point p a) false adjs_points
 
-
-
 let part1 input = 
   let lines = String.split_on_char '\n' input in
   let grid = List.map (fun line -> String.to_seq line |> List.of_seq) lines in
   let height = List.length grid in
   let width = List.length (List.hd grid) in
-  let start = List.fold_left (fun acc i ->
-    if Option.is_some acc then acc
+  let start = List.fold_left (fun (acc, i) row ->
+    let acc = if Option.is_some acc then acc
     else
-      List.fold_left (fun acc j -> 
-        if Option.is_some acc then acc
+      List.fold_left (fun (acc,j) cell -> 
+        let acc = if Option.is_some acc then acc
         else
-          if get grid height width i j == 'S' then Some (i, j)
+          if cell == 'S' then Some (i, j)
           else None
-      ) acc (range width)
-  ) None (range height)  |> Option.get
+        in
+        (acc, j + 1)
+      ) (acc, 0) row |> fst
+    in
+    (acc, i +1)
+  ) (None, 0) grid |> fst |> Option.get
   in
   let start_pipe = List.fold_left (fun acc dir -> 
     let point = add_point start (get_dir dir) in
@@ -142,16 +139,20 @@ let part2 input =
   let grid = List.map (fun line -> String.to_seq line |> List.of_seq) lines in
   let height = List.length grid in
   let width = List.length (List.hd grid) in
-  let start = List.fold_left (fun acc i ->
-    if Option.is_some acc then acc
+  let start = List.fold_left (fun (acc, i) row ->
+    let acc = if Option.is_some acc then acc
     else
-      List.fold_left (fun acc j -> 
-        if Option.is_some acc then acc
+      List.fold_left (fun (acc,j) cell -> 
+        let acc = if Option.is_some acc then acc
         else
-          if get grid width height i j == 'S' then Some (i, j)
+          if cell == 'S' then Some (i, j)
           else None
-      ) acc (range width)
-  ) None (range height)  |> Option.get
+        in
+        (acc, j + 1)
+      ) (acc, 0) row |> fst
+    in
+    (acc, i +1)
+  ) (None, 0) grid |> fst |> Option.get
   in
   let start_pipe = List.fold_left (fun acc dir -> 
     let point = add_point start (get_dir dir) in
@@ -165,32 +166,18 @@ let part2 input =
     ) grid 
   in
   let get_loop start = 
-    let rec get_loop_size' cur prev loop_size = 
-      if (not (equal_point prev (-1, -1))) && equal_point cur start then
-        loop_size
+    let rec get_loop' cur prev loop = 
+      if Option.is_some prev && equal_point cur start then
+        loop
       else
+        let prev = Option.value prev ~default:(-1, -1) in
         let pipe = get_p grid width height cur in
         let adjs = get_adjs pipe in
         let adjs_points = List.map (fun d -> add_point cur d) adjs in
         let next = List.find (fun p -> not (equal_point p prev)) adjs_points in
-        get_loop_size' next cur (loop_size + 1)
+        get_loop' next (Some cur) (PointSet.add cur loop)
     in
-    let loop_size = get_loop_size' start (-1, -1) 0 in
-    let path = (Array.make loop_size (-1, -1)) in
-    let rec get_loop' cur prev i = 
-      if i <> 0 && equal_point cur start then
-        path
-      else
-        begin
-          let pipe = get_p grid width height cur in
-          let adjs = get_adjs pipe in
-          let adjs_points = List.map (fun d -> add_point cur d) adjs in
-          let next = List.find (fun p -> not (equal_point p prev)) adjs_points in
-          Array.set path i cur;
-          get_loop' next cur (i + 1)
-        end
-    in
-    get_loop' start (-1, -1) 0 |> Array.to_list |> PointSet.of_list
+    get_loop' start None PointSet.empty
   in
   let loop = get_loop start in
   let extend_point p = (fst p * 3, snd p * 3) in
