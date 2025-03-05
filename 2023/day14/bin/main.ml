@@ -21,10 +21,8 @@ let roll grid (di, dj) =
     else Array.get grid index
   in
   let rec roll' grid (i, j) reset =
-    if j == -1 then roll' grid (i - 1, width - 1) reset
-    else if i == -1 then roll' grid (0, 0) reset
-    else if j == width then roll' grid (i + 1, 0) reset
-    else if i == width then grid
+    if j == width then roll' grid (i + 1, 0) reset
+    else if i == height then grid
     else
     let cell = get grid (i, j) in
     match cell with
@@ -80,11 +78,11 @@ let part2 input =
     let list = ref [] in
     let rec keep_rolling' grid =
       let str = get_string grid in
-      if Hashtbl.mem ht str then (List.map calculate_load !list, List.find_index (fun s -> String.equal (get_string s) str) !list |> Option.get)
+      if Hashtbl.mem ht str then (List.map calculate_load !list, Hashtbl.find ht str)
       else 
         begin
+        Hashtbl.add ht str (List.length !list);
         list := !list @ [grid];
-        Hashtbl.add ht str true;
         let grid = roll grid (-1,  0) in
         let grid = roll grid ( 0, -1) in
         let grid = roll grid ( 1,  0) in
