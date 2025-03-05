@@ -21,7 +21,9 @@ let roll grid (di, dj) =
     else Array.get grid index
   in
   let rec roll' grid (i, j) reset =
-    if j == width then roll' grid (i + 1, 0) reset
+    if j == -1 then roll' grid (i - 1, width - 1) reset
+    else if i == -1 then roll' grid (0, 0) reset
+    else if j == width then roll' grid (i + 1, 0) reset
     else if i == width then grid
     else
     let cell = get grid (i, j) in
@@ -30,7 +32,7 @@ let roll grid (di, dj) =
       let (ni, nj) = (i + di, j + dj) in
       let next = get grid (ni, nj) in
       if next != '.' then 
-        if reset then roll' grid (0, 0) false
+        if Option.is_some reset then roll' grid (Option.get reset) None
         else roll' grid (i, j + 1) reset
       else
         begin
@@ -38,11 +40,11 @@ let roll grid (di, dj) =
         let index_nj = ni * height + nj in
         Array.set grid index '.';
         Array.set grid index_nj 'O';
-        roll' grid (ni, nj) true
+        roll' grid (ni, nj) (if Option.is_some reset then reset else if di == 0 then Some (i, 0) else Some (0, j))
         end
     | _ -> roll' grid (i, j + 1) reset
   in
-  let list = roll' (grid |> List.flatten |> List.to_seq |> Array.of_seq) (0, 0) false |> Array.to_list in
+  let list = roll' (grid |> List.flatten |> List.to_seq |> Array.of_seq) (0, 0) None |> Array.to_list in
   let _, _, grid = List.fold_left (fun (i, cur ,acc) c -> 
     if i + 1 == height then (0, [], acc @ [cur @ [c]])
     else (succ i, cur @ [c], acc)
