@@ -67,6 +67,11 @@ func main() {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != 200 {
+		fmt.Println("Error status code:", resp.StatusCode)
+		os.Exit(1)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response:", err)
