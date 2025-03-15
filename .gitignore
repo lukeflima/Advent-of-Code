@@ -9,3 +9,4 @@ zig-out
 .zig-cache
 create_day
 _build
+template
