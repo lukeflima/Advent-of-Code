@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 func part1(input string) (string, error) {
@@ -21,7 +22,7 @@ func main() {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
-	input := string(input_bytes)
+	input := strings.TrimSpace(string(input_bytes))
 
 	res, err := part1(input)
 	if err != nil {
