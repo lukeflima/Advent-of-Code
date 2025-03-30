@@ -93,34 +93,23 @@ func part1(input string) (string, error) {
 	return strconv.Itoa(res), nil
 }
 
-type MemoKey struct {
-	ruleNum int
-	start   int
-}
-
-func applyRuleMemoized(message string, ruleNum int, start int, rules map[int]Rule, memo map[MemoKey][]int) []int {
-	key := MemoKey{ruleNum, start}
-	if cached, ok := memo[key]; ok {
-		return cached
-	}
-
+func applyRuleP2Possibles(message string, ruleNum int, rules map[int]Rule) []int {
 	rule := rules[ruleNum]
-	possible := []int{}
 
 	switch rule.typ {
 	case Char:
-		if len(message) > 0 && message[0] == byte(rule.char) {
-			possible = append(possible, 1)
+		if strings.HasPrefix(message, string(rule.char)) {
+			return []int{1}
 		}
+		return []int{}
 	case Chain:
+		possible := []int{}
 		for _, chain := range rule.chains {
 			currentPossible := []int{0}
 			for _, r := range chain {
 				newPossible := []int{}
 				for _, cp := range currentPossible {
-					subMessage := message[cp:]
-					subPossible := applyRuleMemoized(subMessage, r, start+cp, rules, memo)
-					for _, sp := range subPossible {
+					for _, sp := range applyRuleP2Possibles(message[cp:], r, rules) {
 						newPossible = append(newPossible, cp+sp)
 					}
 				}
@@ -131,23 +120,18 @@ func applyRuleMemoized(message string, ruleNum int, start int, rules map[int]Rul
 			}
 			possible = append(possible, currentPossible...)
 		}
+		return possible
 	}
-
-	memo[key] = possible
-	return possible
+	panic("Unreachable")
 }
 
 func applyRuleP2(message string, ruleNum int, rules map[int]Rule) bool {
-	memo := make(map[MemoKey][]int)
-	possible := applyRuleMemoized(message, ruleNum, 0, rules, memo)
-	found := false
-	for _, p := range possible {
+	for _, p := range applyRuleP2Possibles(message, ruleNum, rules) {
 		if p == len(message) {
-			found = true
-			break
+			return true
 		}
 	}
-	return found
+	return false
 }
 
 func part2(input string) (string, error) {
