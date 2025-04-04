@@ -13,10 +13,12 @@ std::string strip(std::string_view s) {
 }
 
 std::string part1(const std::string_view input) {
+    (void) input;
     return "";
 }
 
 std::string part2(const std::string_view input) {
+    (void) input;
     return "";
 }
 
