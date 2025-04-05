@@ -2,6 +2,7 @@
 #include <fstream>
 #include <filesystem>
 #include <string_view>
+#include <vector>
 namespace fs = std::filesystem;
 
 std::string strip(std::string_view s) {
@@ -10,6 +11,18 @@ std::string strip(std::string_view s) {
     size_t spaces_end = s.size();
     while (std::isspace(s[spaces_end - 1])) spaces_end--;
     return std::string(s.substr(spaces_start, spaces_end));
+}
+
+std::vector<std::string> split(std::string_view s_input, std::string_view delimiter) {
+    std::vector<std::string> result;
+    auto s = std::string(s_input);
+    unsigned long prev = 0;
+    for(unsigned long i = s.find(delimiter); i != s.npos; i = s.find(delimiter, prev)) {
+        result.push_back(s.substr(prev, i));
+        prev = i + 1;
+    }
+    if(s.length() > 0) result.push_back(s.substr(prev));
+    return result;
 }
 
 std::string part1(const std::string_view input) {
