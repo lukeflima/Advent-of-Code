@@ -13,7 +13,7 @@ std::string strip(std::string_view s) {
     while (std::isspace(s[spaces_start])) spaces_start++;
     size_t spaces_end = s.size();
     while (std::isspace(s[spaces_end - 1])) spaces_end--;
-    return std::string(s.substr(spaces_start, spaces_end));
+    return std::string(s.substr(spaces_start, spaces_end - spaces_start));
 }
 
 std::vector<std::string> split(std::string_view s_input, std::string_view delimiter) {
