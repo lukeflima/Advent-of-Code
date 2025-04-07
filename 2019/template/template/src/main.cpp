@@ -18,7 +18,7 @@ std::vector<std::string> split(std::string_view s_input, std::string_view delimi
     auto s = std::string(s_input);
     unsigned long prev = 0;
     for(unsigned long i = s.find(delimiter); i != s.npos; i = s.find(delimiter, prev)) {
-        result.push_back(s.substr(prev, i));
+        result.push_back(s.substr(prev, i - prev));
         prev = i + 1;
     }
     if(s.length() > 0) result.push_back(s.substr(prev));
