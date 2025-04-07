@@ -26,7 +26,7 @@ std::vector<std::string> split(std::string_view s_input, std::string_view delimi
         result.push_back(s.substr(prev, i - prev));
         prev = i + 1;
     }
-    if(s.length() > 0) result.push_back(s.substr(prev));
+    if(prev < s.length()) result.push_back(s.substr(prev));
     return result;
 }
 
