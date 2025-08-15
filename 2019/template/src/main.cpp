@@ -29,13 +29,9 @@ void download_input(int day, std::string_view folder_path) {
 }
 
 std::string remove_quotes(std::string_view s) {
-    auto quote = "'";
-    auto start_quote = s.find(quote);
-    if(start_quote < 0) { quote = "\""; start_quote = s.find(quote); }
-    if(start_quote < 0) return std::string(s);
-    const auto end_quote = s.find(quote, start_quote + 1);
-    if(end_quote < 0) return std::string(s);
-    return std::string(s.substr(start_quote + 1, end_quote-1));
+    if (s.size() < 2) return std::string(s);
+    if(!(s[0] == '\''  && s[s.size()-1] == '\'') && !(s[0] == '"'  && s[s.size()-1] == '"')) return std::string(s);
+    return std::string(s.substr(1, s.size() - 2));
 }
 
 std::string strip(std::string_view s) {
@@ -73,7 +69,7 @@ void dotenv_init(std::string dotenv_filepath = ".env") {
 int main(int argc, char **argv) {
     
     if(argc != 2) {
-        std::print("Usage: {} day", argv[0]);
+        std::print("Usage: {} <day>\n", argv[0]);
         return -1;
     }
     
