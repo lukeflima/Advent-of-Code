@@ -1,10 +1,9 @@
 .vscode/
 .env
-**/input.txt
-**/inputtest.txt
 **/input
 **/sample
-**/sample.txt
+**/*.txt
+!**/CMakeLists.txt
 zig-out
 .zig-cache
 create_day
