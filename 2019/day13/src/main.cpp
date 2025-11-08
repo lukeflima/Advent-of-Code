@@ -87,7 +87,6 @@ void intcode_computer(const std::string_view input, const std::function<long lon
                 break;
             case 4:
                 op1 = extract_params1(op_with_modes, i);
-                // std::print("{}, ", op1);
                 output_cb(op1);
                 i += 2;
                 break;
@@ -122,14 +121,15 @@ void intcode_computer(const std::string_view input, const std::function<long lon
 
 std::string part1(const std::string_view input) {
     size_t number_of_blocks = 0;
-    size_t output_count = 0;
+
     auto output_cb = [&](long long output) {
-        if(output_count % 3 == 2 && output == 2) {
-            number_of_blocks += 1;
-        } 
+        static size_t output_count = 0;
+        if(output_count % 3 == 2 && output == 2) number_of_blocks += 1; 
         output_count++;
     };
+
     intcode_computer(input, []() { return 0; }, output_cb);
+
     return std::to_string(number_of_blocks);
 }
 
@@ -155,16 +155,10 @@ struct PointHash {
     }
 };
 
-struct Cell {
-    Point position;
-    CellType type;
-};
 
 std::string part2(const std::string_view input_sw) {
     std::string input = std::string(input_sw);
     input[0] = '2';
-
-    std::unordered_map<Point, Cell, PointHash> grid;
     
     Point ball_position{0, 0};
     Point paddle_position{0, 0};
@@ -182,13 +176,10 @@ std::string part2(const std::string_view input_sw) {
             auto position = Point{x, y};
             if(position == Point{-1, 0}) {
                 score = output;
-            } else {
-                if(static_cast<CellType>(output) == BALL) {
-                    ball_position = position;
-                } else if(static_cast<CellType>(output) == PADDLE) {
-                    paddle_position = position;
-                }
-                grid.insert_or_assign(position, Cell{position, static_cast<CellType>(output)});
+            } else if(static_cast<CellType>(output) == BALL) {
+                ball_position = position;
+            } else if(static_cast<CellType>(output) == PADDLE) {
+                paddle_position = position;
             }
         } 
         output_count++;
