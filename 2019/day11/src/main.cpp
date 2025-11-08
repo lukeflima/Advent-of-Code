@@ -9,7 +9,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
+#include <functional>
 #include <vector>
 namespace fs = std::filesystem;
 
@@ -54,206 +54,139 @@ template <> struct std::formatter<Point> : std::formatter<std::string> {
     }
 };
 
-std::string part1(const std::string_view input) {
-    auto program =
-      split(input, ",") |
-      std::views::transform([](std::string s) { return std::stoll(s); }) |
-      std::views::enumerate | std::ranges::to<std::map>();
+void intcode_computer(const std::string_view input, const std::function<long long()>& input_cb, const std::function<void(long long)>& output_cb) {
+     auto program = split(input, ",") 
+    | std::views::transform([](std::string s) { return std::stoll(s); })
+    | std::views::enumerate
+    | std::ranges::to<std::map>();
     auto program_size = program.size();
     auto relative_base = 0ll;
     auto value_from_mode_addr = [&](size_t i, size_t mode) {
-        if (mode == 0) return program[i];
-        if (mode == 1) return (long long)i;
+        if(mode == 0) return program[i];
+        if(mode == 1) return (long long) i;
         return program[i] + relative_base;
-    };
+    }; 
     auto value_from_mode = [&](size_t i, size_t mode) {
         return program[value_from_mode_addr(i, mode)];
-    };
+    }; 
     auto extract_mode = [&](size_t op_with_modes, size_t mode_index) {
-        return (op_with_modes / (size_t)std::pow(10, mode_index + 1)) % 10;
-    };
+        return (op_with_modes / (size_t) std::pow(10, mode_index + 1)) % 10;
+    };   
     auto extract_params3 = [&](size_t op_with_modes, size_t i) {
         return std::make_tuple(
-            value_from_mode(i + 1, extract_mode(op_with_modes, 1)),
-            value_from_mode(i + 2, extract_mode(op_with_modes, 2)),
-            value_from_mode_addr(i + 3, extract_mode(op_with_modes, 3)));
+            value_from_mode(i + 1, extract_mode(op_with_modes, 1)), 
+            value_from_mode(i + 2, extract_mode(op_with_modes, 2)), 
+            value_from_mode_addr(i + 3, extract_mode(op_with_modes, 3))
+        );
     };
     auto extract_params2 = [&](size_t op_with_modes, size_t i) {
         return std::make_tuple(
-            value_from_mode(i + 1, extract_mode(op_with_modes, 1)),
-            value_from_mode(i + 2, extract_mode(op_with_modes, 2)));
-        };
-    auto extract_params1 = [&](size_t op_with_modes, size_t i) {
-        return value_from_mode(i + 1, extract_mode(op_with_modes, 1));
+            value_from_mode(i + 1, extract_mode(op_with_modes, 1)), 
+            value_from_mode(i + 2, extract_mode(op_with_modes, 2))
+        );
     };
-  // auto res = 0ll;
-  Point dirs[]{Point{1, 0}, Point{0, 1}, Point{-1, 0}, Point{0, -1}};
-  auto cur_pos = Point{0, 0};
-  size_t cur_dir = 0;
-  std::unordered_map<Point, long long, Point_Hash> visited;
-  bool first_read = true;
-  for (size_t i = 0; i < program_size;) {
-      auto op_with_modes = program[i];
-      if (op_with_modes == 99) break;
-      auto op = op_with_modes % 100;
-      long long op1 = 0, op2 = 0, dest = 0;
-      switch (op) {
-        case 1:
-            std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
-            program[dest] = op1 + op2;
-            i += 4;
-            break;
-        case 2:
-            std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
-            program[dest] = op1 * op2;
-            i += 4;
-            break;
-        case 3:
-            program[value_from_mode_addr(i + 1, extract_mode(op_with_modes, 1))] =
-                visited.contains(cur_pos) ? visited[cur_pos] : 0;
-            i += 2;
-            break;
-        case 4:
-            op1 = extract_params1(op_with_modes, i);
-            if (first_read)
-                visited[cur_pos] = op1;
-                else {
-                    cur_dir = op1 == 0 ? (cur_dir + 4 - 1) % 4 : (cur_dir + 1) % 4;
-                    cur_pos = cur_pos + dirs[cur_dir];
-                }
-            first_read = !first_read;
-            i += 2;
-            break;
-        case 5:
-            std::tie(op1, op2) = extract_params2(op_with_modes, i);
-            i = op1 != 0 ? op2 : i + 3;
-            break;
-        case 6:
-            std::tie(op1, op2) = extract_params2(op_with_modes, i);
-            i = op1 == 0 ? op2 : i + 3;
-            break;
-        case 7:
-            std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
-            program[dest] = op1 < op2 ? 1 : 0;
-            i += 4;
-            break;
-        case 8:
-            std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
-            program[dest] = op1 == op2 ? 1 : 0;
-            i += 4;
-            break;
-        case 9:
-            op1 = extract_params1(op_with_modes, i);
-            relative_base += op1;
-            i += 2;
-            break;
-        default:
-            std::println("Unknown opcode: {} at position {}", op, i);
-      }
-  }
-  return std::to_string(visited.size());
+    auto extract_params1 = [&](size_t op_with_modes, size_t i) {
+        return  value_from_mode(i + 1, extract_mode(op_with_modes, 1));
+    };
+    for(size_t i = 0; i < program_size; ) {
+        auto op_with_modes = program[i];
+        if(op_with_modes == 99) break;
+        auto op = op_with_modes % 100;
+        long long op1 = 0, op2 = 0, dest = 0;
+        switch (op) {
+            case 1:
+                std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
+                program[dest] = op1 + op2;
+                i += 4;
+                break;
+            case 2:
+                std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
+                program[dest] = op1 * op2;
+                i += 4;
+                break;
+            case 3:
+                program[value_from_mode_addr(i + 1, extract_mode(op_with_modes, 1))] = input_cb();
+                i += 2;
+                break;
+            case 4:
+                op1 = extract_params1(op_with_modes, i);
+                // std::print("{}, ", op1);
+                output_cb(op1);
+                i += 2;
+                break;
+            case 5:
+                std::tie(op1, op2) = extract_params2(op_with_modes, i);
+                i = op1 != 0 ? op2 : i + 3;
+                break;
+            case 6:
+                std::tie(op1, op2) = extract_params2(op_with_modes, i);
+                i = op1 == 0 ? op2 : i + 3;
+                break;
+            case 7:
+                std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
+                program[dest] = op1 < op2 ? 1 : 0;
+                i += 4;
+                break;
+            case 8:
+                std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
+                program[dest] = op1 == op2 ? 1 : 0;
+                i += 4;
+                break;
+            case 9:
+                op1 = extract_params1(op_with_modes, i);
+                relative_base += op1;
+                i += 2;
+                break;
+            default:
+                std::println("Unknown opcode: {} at position {}", op, i);
+        }
+    }
+}
+
+
+std::string part1(const std::string_view input) {
+    Point dirs[]{Point{1, 0}, Point{0, 1}, Point{-1, 0}, Point{0, -1}};
+    auto cur_pos = Point{0, 0};
+    size_t cur_dir = 0;
+    std::unordered_map<Point, long long, Point_Hash> visited;
+    bool first_read = true;
+    auto input_cb = [&]() -> long long {
+        if(visited.contains(cur_pos)) return visited[cur_pos];
+        return 0;
+    };
+    auto output_cb = [&](long long output) {
+        if(first_read) {
+            visited[cur_pos] = output;
+        } else {
+            cur_dir = output == 0 ? (cur_dir + 4 - 1) % 4 : (cur_dir + 1) % 4;
+            cur_pos = cur_pos + dirs[cur_dir];
+        }
+        first_read = !first_read;
+    };
+    intcode_computer(input, input_cb, output_cb);
+    return std::to_string(visited.size());
 }
 
 std::string part2(const std::string_view input) {
-    auto program =
-    split(input, ",") |
-    std::views::transform([](std::string s) { return std::stoll(s); }) |
-    std::views::enumerate | std::ranges::to<std::map>();
-    auto program_size = program.size();
-    auto relative_base = 0ll;
-    auto value_from_mode_addr = [&](size_t i, size_t mode) {
-        if (mode == 0)
-            return program[i];
-        if (mode == 1)
-            return (long long)i;
-        return program[i] + relative_base;
-    };
-    auto value_from_mode = [&](size_t i, size_t mode) {
-        return program[value_from_mode_addr(i, mode)];
-    };
-    auto extract_mode = [&](size_t op_with_modes, size_t mode_index) {
-        return (op_with_modes / (size_t)std::pow(10, mode_index + 1)) % 10;
-    };
-    auto extract_params3 = [&](size_t op_with_modes, size_t i) {
-        return std::make_tuple(
-            value_from_mode(i + 1, extract_mode(op_with_modes, 1)),
-            value_from_mode(i + 2, extract_mode(op_with_modes, 2)),
-            value_from_mode_addr(i + 3, extract_mode(op_with_modes, 3)));
-    };
-    auto extract_params2 = [&](size_t op_with_modes, size_t i) {
-        return std::make_tuple(
-            value_from_mode(i + 1, extract_mode(op_with_modes, 1)),
-            value_from_mode(i + 2, extract_mode(op_with_modes, 2)));
-    };
-    auto extract_params1 = [&](size_t op_with_modes, size_t i) {
-        return value_from_mode(i + 1, extract_mode(op_with_modes, 1));
-    };
-    // auto res = 0ll;
     Point dirs[]{Point{1, 0}, Point{0, 1}, Point{-1, 0}, Point{0, -1}};
     auto cur_pos = Point{0, 0};
     size_t cur_dir = 0;
     std::unordered_map<Point, long long, Point_Hash> visited{{cur_pos, 1}};
     bool first_read = true;
-    for (size_t i = 0; i < program_size;) {
-        auto op_with_modes = program[i];
-
-        if (op_with_modes == 99) break;
-
-        auto op = op_with_modes % 100;
-        long long op1 = 0, op2 = 0, dest = 0;
-        switch (op) {
-        case 1:
-            std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
-            program[dest] = op1 + op2;
-            i += 4;
-            break;
-        case 2:
-            std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
-            program[dest] = op1 * op2;
-            i += 4;
-            break;
-        case 3:
-            program[value_from_mode_addr(i + 1, extract_mode(op_with_modes, 1))] =
-                visited.contains(cur_pos) ? visited[cur_pos] : 0;
-            i += 2;
-            break;
-        case 4:
-            op1 = extract_params1(op_with_modes, i);
-            if (first_read) visited[cur_pos] = op1;
-            else {
-                cur_dir = op1 == 0 ? (cur_dir + 4 - 1) % 4 : (cur_dir + 1) % 4;
-                cur_pos = cur_pos + dirs[cur_dir];
-            }
-            first_read = !first_read;
-            i += 2;
-            break;
-        case 5:
-            std::tie(op1, op2) = extract_params2(op_with_modes, i);
-            i = op1 != 0 ? op2 : i + 3;
-            break;
-        case 6:
-            std::tie(op1, op2) = extract_params2(op_with_modes, i);
-            i = op1 == 0 ? op2 : i + 3;
-            break;
-        case 7:
-            std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
-            program[dest] = op1 < op2 ? 1 : 0;
-            i += 4;
-            break;
-        case 8:
-            std::tie(op1, op2, dest) = extract_params3(op_with_modes, i);
-            program[dest] = op1 == op2 ? 1 : 0;
-            i += 4;
-            break;
-        case 9:
-            op1 = extract_params1(op_with_modes, i);
-            relative_base += op1;
-            i += 2;
-            break;
-        default:
-            std::println("Unknown opcode: {} at position {}", op, i);
+    auto input_cb = [&]() -> long long {
+        if(visited.contains(cur_pos)) return visited[cur_pos];
+        return 0;
+    };
+    auto output_cb = [&](long long output) {
+        if(first_read) {
+            visited[cur_pos] = output;
+        } else {
+            cur_dir = output == 0 ? (cur_dir + 4 - 1) % 4 : (cur_dir + 1) % 4;
+            cur_pos = cur_pos + dirs[cur_dir];
         }
-    }
+        first_read = !first_read;
+    };
+    intcode_computer(input, input_cb, output_cb);
 
     int min_x = std::numeric_limits<int>::max();
     int min_y = std::numeric_limits<int>::max();
