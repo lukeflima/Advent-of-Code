@@ -1,6 +1,6 @@
 # Advent of Code
 
-- 2019 in C++ (WIP) 
+- 2019 in C++
 - 2020 in Go 
 - 2021 in Rust 
 - 2022 in Zig 
