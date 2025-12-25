@@ -16,12 +16,13 @@ def pattern_to_num(pattern):
 
 
 def parse_machine(line: str):
+    [line, res] = line.split(" | ")
     blocks = line.split("] (")
     pattern = blocks[0][1:]
     blocks = blocks[1].split(") {")
     buttons = [set(map(int, btn_str[1:-1].split(","))) for btn_str in ("(" + blocks[0] + ")").split()]
     joltage = list(map(int, blocks[1][:-1].split(",")))
-    return pattern, buttons, joltage
+    return pattern, buttons, joltage, int(res)
 
 
 def apply_button(state, button):
@@ -34,7 +35,7 @@ def part1(input: str) -> str:
     machines = list(map(parse_machine, input.strip().split("\n")))
 
     res = 0
-    for pattern, buttons, joltage in machines:
+    for pattern, buttons, joltage, _ in machines:
         graph = defaultdict(list)
         for i in range(2**len(pattern)):
             for b in buttons:
@@ -60,11 +61,10 @@ def part1(input: str) -> str:
 
 
 def part2(input: str) -> str:
-    sols = list(map(int, open("res", "r").read().strip().split("\n")))
     machines = list(map(parse_machine, input.strip().split("\n")))
     res = 0
     fail = 0
-    for index, (actual_sol, (pattern, buttons, joltage)) in enumerate(zip(sols, machines)):
+    for index, (pattern, buttons, joltage, actual_sol) in enumerate(machines):
         matrix = set()
         for i, jolt in enumerate(joltage):
             row = [1.0 if i in button else 0.0 for button in buttons]
@@ -125,24 +125,7 @@ def part2(input: str) -> str:
         # matrix = [list(map(float, A[i])) + [float(rhs[i])] for i in range(len(A))]
         # print(matrix)        
 
-        n = len(matrix)
-        m = len(matrix[0])-1
-        basis = [m + i for i in range(n)]
         
-        c = [1]*m + [0]*(n) + [0]
-        pseudo_objective = [0]*(m + n + 1)
-        for i in range(n):
-            for j in range(m):
-                pseudo_objective[j] -= matrix[i][j]
-            pseudo_objective[-1] -= matrix[i][-1]
-
-            matrix[i] = matrix[i][:-1] + [0] * (i) +[1] + [0]*(n - i -1) + [matrix[i][-1]]
-        
-        m += n
-        matrix.append(c)
-        matrix.append(pseudo_objective)
-        n += 2
-        print(m,'x', n)
 
         def print_c(c, name="Cost"):
             print(f"{name}:  ", end="")
@@ -165,127 +148,176 @@ def part2(input: str) -> str:
             print()
 
 
-        print("Basis:", basis)
-        # print matrix
-        print_matrix(matrix, basis)
-        # print(basis, len(basis), n)
-
-        basis_visited = {tuple(sorted(basis)): -c[-1]}
-
         def is_optimal(c):
             return all(c[i] >= 0 for i in range(len(c)-1))
 
-        def choose_next_basis(c):
-            print(c)
-            next = min(range(len(c) - 1), key=lambda i: c[i])
-            if c[next] <= -1e-9:
-                return next
-            return -1
         
-        def choose_leaving_var(matrix, next_basis_var, using_psdeo=False):
-            k = 2 if using_psdeo else 1
-            ratios = []
-            for i in range(n-k):
-                if matrix[i][next_basis_var] >= 1e-9:
-                    ratios.append((i, matrix[i][-1] / matrix[i][next_basis_var]))
-            if len(ratios) == 0:
-                return -1
-            leaving = min(ratios, key=lambda x: x[1])[0]
-            return leaving
-    
-        def pivot(matrix, basis, next_basis_var, leaving):
-            print("Pivoting on row", leaving+1, "column", next_basis_var+1)
-            #update basis
-            basis[leaving] = next_basis_var
 
-            if matrix[leaving][next_basis_var] != 1:
-                factor = matrix[leaving][next_basis_var]
-                for j in range(len(matrix[leaving])):                            
-                    matrix[leaving][j] /= factor
-            for i in range(n):
-                if i != leaving and abs(matrix[i][next_basis_var]) >= 1e-9:
-                    factor = matrix[i][next_basis_var]
-                    for j in range(m+1):                            
-                        matrix[i][j] -= factor * matrix[leaving][j]
-
-
-        phase = 1
-        while True:
-            next_basis_var = choose_next_basis(matrix[-1])
-            if next_basis_var != -1:
-                leaving = choose_leaving_var(matrix, next_basis_var, using_psdeo=phase == 1)
-                if leaving == -1:
-                    print("No leaving variable found")
-                    break
-                print(leaving, basis)
-                print("Entering:", next_basis_var, "Leaving:", basis[leaving])
-                pivot(matrix, basis, next_basis_var, leaving)
-                print_matrix(matrix, basis)
-            else:
-                print("Optimal reached for phase", phase)
-                break
-        
-        phase = 2
-        
-        if abs(matrix[-1][-1]) > 1e-9:
-            print("Phase 1 should end with 0 cost", index)
-            exit(1)
-
-        print("Switching to phase 2")
-        print_matrix(matrix, basis)
-        #remove artificial variables from matrix
-        new_matrix = []
-        m -= len(basis)
-        n -= 1
-        for i in range(n):
-            new_matrix.append(matrix[i][:m] + [matrix[i][-1]])
-        matrix = new_matrix     
-        print_matrix(matrix, basis)
-        print(basis, n)
-        print("Removing artificial variables from basis")
-        for i in range(len(basis)):
-            if basis[i] >= m:
-                next_basis_var = -1
-                for j in range(m):
-                    if abs(matrix[i][j]) > 1e-9:
-                        next_basis_var = j
-                        break
+        def simplex(matrix, basis=None, phase=1, dual=False):
+            
+            if basis is None:
+                n = len(matrix)
+                m = len(matrix[0])-1
+                basis = [m + i for i in range(n)]
                 
-                if next_basis_var == -1:
-                    continue
-                print("Removing artificial basis variable x", basis[i], "with x", next_basis_var)
-                pivot(matrix, basis, next_basis_var, i)
+                c = [1]*m + [0]*(n) + [0]
+                pseudo_objective = [0]*(m + n + 1)
+                for i in range(n):
+                    for j in range(m):
+                        pseudo_objective[j] -= matrix[i][j]
+                    pseudo_objective[-1] -= matrix[i][-1]
 
-        print_matrix(matrix, basis)
+                    matrix[i] = matrix[i][:-1] + [0] * (i) +[1] + [0]*(n - i -1) + [matrix[i][-1]]
+                
+                m += n
+                matrix.append(c)
+                matrix.append(pseudo_objective)
+                n += 2
+                print(m,'x', n)
 
+            def choose_next_basis(A):
+                c = A[-1]
+                next = min(range(len(c) - 1), key=lambda i: c[i])
+                if c[next] <= -1e-9:
+                    return next
+                return -1
+            
+            def choose_leaving_var(matrix, next_basis_var, using_psdeo=False):
+                k = 2 if using_psdeo else 1
+                ratios = []
+                for i in range(n-k):
+                    if matrix[i][next_basis_var] >= 1e-9:
+                        ratios.append((i, matrix[i][-1] / matrix[i][next_basis_var]))
+                if len(ratios) == 0:
+                    return -1
+                leaving = min(ratios, key=lambda x: x[1])[0]
+                return leaving
         
-        phase = 2
-        while True:
-            next_basis_var = choose_next_basis(matrix[-1])
-            if next_basis_var != -1:
-                leaving = choose_leaving_var(matrix, next_basis_var, using_psdeo=phase == 1)
-                if leaving == -1:
+            def pivot(matrix, basis, next_basis_var, leaving):
+                print("Pivoting on row", leaving+1, "column", next_basis_var+1)
+                #update basis
+                basis[leaving] = next_basis_var
+
+                if matrix[leaving][next_basis_var] != 1:
+                    factor = matrix[leaving][next_basis_var]
+                    for j in range(len(matrix[leaving])):                            
+                        matrix[leaving][j] /= factor
+                for i in range(n):
+                    if i != leaving and abs(matrix[i][next_basis_var]) >= 1e-9:
+                        factor = matrix[i][next_basis_var]
+                        for j in range(m+1):                            
+                            matrix[i][j] -= factor * matrix[leaving][j]
+            
+            phase1 = False
+            while phase == 1:
+                next_basis_var = choose_next_basis(matrix)
+                if next_basis_var != -1:
+                    leaving = choose_leaving_var(matrix, next_basis_var, using_psdeo=phase == 1)
+                    if leaving == -1:
+                        print("No leaving variable found")
+                        if abs(matrix[-1][-1]) > 1e-9:
+                            print("Phase 1 should end with 0 cost", index)
+                            exit(1)
+                        print("Switching to phase 2")
+                        print_matrix(matrix, basis)
+                        phase = 2
+                        break
+                    print(leaving, basis)
+                    print("Entering:", next_basis_var, "Leaving:", basis[leaving])
+                    pivot(matrix, basis, next_basis_var, leaving)
+                    phase1 = True
+                    print_matrix(matrix, basis)
+                else:
+                    print("Optimal reached for phase", phase)
+                    if abs(matrix[-1][-1]) > 1e-9:
+                        print("Phase 1 should end with 0 cost", index)
+                        exit(1)
+                    print("Switching to phase 2")
+                    print_matrix(matrix, basis)
+
+                    phase = 2
                     break
-                print("Entering:", next_basis_var, "Leaving:", basis[leaving])
-                pivot(matrix, basis, next_basis_var, leaving)
+
+            
+            #remove artificial variables from matrix
+            if phase1:
+                new_matrix = []
+                m -= len(basis)
+                n -= 1
+                for i in range(n):
+                    new_matrix.append(matrix[i][:m] + [matrix[i][-1]])
+                matrix = new_matrix     
                 print_matrix(matrix, basis)
-            else:
-                break
+                print(basis, n)
+                print("Removing artificial variables from basis")
+                for i in range(len(basis)):
+                    if basis[i] >= m:
+                        next_basis_var = -1
+                        for j in range(m):
+                            if abs(matrix[i][j]) > 1e-9:
+                                next_basis_var = j
+                                break
+                        
+                        if next_basis_var == -1:
+                            continue
+                        print("Removing artificial basis variable x", basis[i], "with x", next_basis_var)
+                        pivot(matrix, basis, next_basis_var, i)
+
+                print_matrix(matrix, basis)
+
+            while True:
+                next_basis_var = choose_next_basis(matrix)
+                if next_basis_var != -1:
+                    leaving = choose_leaving_var(matrix, next_basis_var, using_psdeo=phase == 1)
+                    if leaving == -1:
+                        break
+                    print("Entering:", next_basis_var, "Leaving:", basis[leaving])
+                    pivot(matrix, basis, next_basis_var, leaving)
+                    print_matrix(matrix, basis)
+                else:
+                    break
+
+            sol = -matrix[-1][-1]
+            
+            return sol, basis
         
-        sol = math.ceil(-matrix[-1][-1])
-        print(f"{index+1} Optimal cost:", sol, "Actual cost:", actual_sol, "✅" if sol == actual_sol else "❌")
-        is_integer_solution = all(abs(matrix[i][-1] - int(matrix[i][-1])) < 1e-9 for i in range(len(basis)))
-        print("Integer solution?" , is_integer_solution)
+        basis = None
+        breakage = False
+        dual = False
+        while True:
+            sol, basis = simplex(matrix, basis, 1 if basis is None else 2, dual)
+            print(f"{index+1} Optimal cost:", sol, "Actual cost:", actual_sol, "✅" if sol == actual_sol else "❌")
+            is_integer_solution = all(abs(matrix[i][-1] - int(matrix[i][-1])) < 1e-9 for i in range(len(basis)))
+            print("Integer solution?" , is_integer_solution)
+            if breakage:
+                break
+            if is_integer_solution:
+                break
+            else:
+                # find a basic variable that is not integer to cutting plane
+                for i in range(len(basis)):
+                    if abs(matrix[i][-1] - int(matrix[i][-1])) >= 1e-9:
+                        print("Adding cutting plane for x", basis[i])
+                        new_row = [0.0]* (len(matrix[0]) -1)
+                        for j in range(len(matrix[i]) -1):
+                            new_row[j] = matrix[i][j] - math.floor(matrix[i][j])
+                        new_row[-1] = matrix[i][-1] - math.floor(matrix[i][-1])
+                        new_row.insert(-1, 1.0)  # new slack variable
+                        for r in matrix:
+                            r.insert(-1, 0.0)
+                        matrix.insert(-1, new_row)
+                        dual = new_row[-1] < -1e-9
+                        basis.append(len(matrix[0]) -2)
+                        print_matrix(matrix, basis)
+                        break
+                breakage = True
+                
+
         if sol != actual_sol:
             print(joltage)
-            if sol + 1 == actual_sol:
-                print("Off by one?")
-                sol += 1
-            else:
-                fail += 1
-                exit(1)
+            fail += 1
+            # exit(1)
         print("basis:", basis)
-        print_c(c)
         res += sol
             
             
