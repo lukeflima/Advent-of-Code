@@ -3,7 +3,8 @@ from collections import defaultdict
 from heapq import heappush, heappop
 import math 
 
-DEBUG = False
+
+DEBUG = True
 
 def pattern_to_num(pattern):
     n = 0
@@ -102,7 +103,7 @@ def choose_leaving_var(matrix, next_basis_var, using_psdeo, dual):
     k = 2 if using_psdeo else 1
     ratios = []
     if dual:
-        for j in range(m-1):
+        for j in range(m-k):
             if matrix[next_basis_var][j] < -1e-9 and abs(matrix[-1][j]) > 1e-9:
                 ratios.append((j, -matrix[-1][j]/ matrix[next_basis_var][j]))
     else:
@@ -125,6 +126,7 @@ def pivot(matrix, basis, next_basis_var, leaving, dual):
     n = len(matrix)
     m = len(matrix[0])-1
     if DEBUG: print("Pivoting on row", leaving+1, "column", next_basis_var+1)
+    print(n,m)
     #update basis
     basis[leaving] = next_basis_var
 
@@ -138,64 +140,51 @@ def pivot(matrix, basis, next_basis_var, leaving, dual):
             for j in range(m+1):                            
                 matrix[i][j] -= factor * matrix[leaving][j]
 
+
 def simplex(matrix, basis=None, phase=1, dual=False):
     if dual:
         if DEBUG: print("Dual Simplex Method")
+
     n = len(matrix)
     m = len(matrix[0])-1
+    
     if basis is None:
-        basis = [m + i for i in range(n)]
+        basis = [m + i for i in range(n-1)]
         
-        c = [1]*m + [0]*(n) + [0]
-        pseudo_objective = [0]*(m + n + 1)
-        for i in range(n):
+        pseudo_objective = [0]*(m + n)
+        for i in range(n-1):
             for j in range(m):
                 pseudo_objective[j] -= matrix[i][j]
             pseudo_objective[-1] -= matrix[i][-1]
 
-            matrix[i] = matrix[i][:-1] + [0] * (i) +[1] + [0]*(n - i -1) + [matrix[i][-1]]
-        
-        m += n
-        matrix.append(c)
+            matrix[i] = matrix[i][:-1] + [0] * (i) +[1] + [0]*(n - i - 2) + [matrix[i][-1]]
+        matrix[-1] = matrix[-1][:-1] + [0]*(n-1) + [matrix[-1][-1]]
+        m += n - 1
         matrix.append(pseudo_objective)
-        n += 2
+        n += 1
         if DEBUG: print(m,'x', n)
-
-
-    
-    phase1 = False
-    while phase == 1:
+    print_matrix(matrix, basis)
+    print("nxm", n,m)
+    while True:
         next_basis_var = choose_next_basis(matrix, dual)
         if next_basis_var != -1:
             leaving = choose_leaving_var(matrix, next_basis_var, using_psdeo=phase == 1, dual=dual)
             if leaving == -1:
-                if DEBUG: print("No leaving variable found")
-                if abs(matrix[-1][-1]) > 1e-9:
-                    if DEBUG: print("Phase 1 should end with 0 cost")
-                    exit(1)
-                if DEBUG: print("Switching to phase 2")
-                print_matrix(matrix, basis)
-                phase = 2
+                if DEBUG: print("no col found")
                 break
-            if DEBUG: print(leaving, basis)
-            if DEBUG: print("Entering:", next_basis_var, "Leaving:", basis[leaving])
+            # print("Entering:", next_basis_var, "Leaving:", basis[leaving])
             pivot(matrix, basis, next_basis_var, leaving, dual)
-            phase1 = True
             print_matrix(matrix, basis)
         else:
-            if DEBUG: print("Optimal reached for phase", phase)
-            if abs(matrix[-1][-1]) > 1e-9:
-                print("Phase 1 should end with 0 cost")
-                exit(1)
-            if DEBUG: print("Switching to phase 2")
-            print_matrix(matrix, basis)
-
-            phase = 2
+            if DEBUG: print("no row found")
             break
 
-    
     #remove artificial variables from matrix
-    if phase1:
+    if phase == 1:
+        if abs(matrix[-1][-1]) > 1e-9:
+            print("Must be 0 for feasable solution")
+            print_matrix(matrix, basis)
+            exit(1)
         new_matrix = []
         m -= len(basis)
         n -= 1
@@ -219,20 +208,6 @@ def simplex(matrix, basis=None, phase=1, dual=False):
                 pivot(matrix, basis, next_basis_var, i, dual)
 
         print_matrix(matrix, basis)
-
-    while True:
-        next_basis_var = choose_next_basis(matrix, dual)
-        if next_basis_var != -1:
-            leaving = choose_leaving_var(matrix, next_basis_var, using_psdeo=phase == 1, dual=dual)
-            if leaving == -1:
-                if DEBUG: print("no col found")
-                break
-            # print("Entering:", next_basis_var, "Leaving:", basis[leaving])
-            pivot(matrix, basis, next_basis_var, leaving, dual)
-            print_matrix(matrix, basis)
-        else:
-            if DEBUG: print("no row found")
-            break
     
     sol = -matrix[-1][-1]
     # if dual:
@@ -240,6 +215,16 @@ def simplex(matrix, basis=None, phase=1, dual=False):
     #         matrix[i] = matrix[i][:-2] + [matrix[i][-1]]
 
     return sol, basis, matrix
+
+    
+def solve_lp(c, A, b, basis=None, dual=False, c0=0):
+    matrix = [A[i] + [b[i]] for i in range(len(b))]
+    matrix.append(c+[c0])
+    if basis is None:
+        sol, basis, matrix = simplex(matrix, basis, 1, dual)
+        if is_optimal(matrix):
+            return sol, basis, matrix
+    return simplex(matrix, basis, 2, dual)
 
 def part2(input: str) -> str:
     machines = list(map(parse_machine, input.strip().split("\n")))
@@ -254,19 +239,24 @@ def part2(input: str) -> str:
             row.append(float(jolt))
             matrix.add(tuple(row))
         matrix = [list(row) for row in matrix]
+        matrix.append([1]*(len(matrix[0]) - 1) + [0])
         # print original_matrix
-        # for row in matrix:
-        #     for val in row:
-        #         print(f"{val:8.3f}", end=" ")
-        #     print()
-        # print()       
+        for row in matrix:
+            for val in row:
+                print(f"{val:8.3f}", end=" ")
+            print()
+        print()       
         
         basis = None
         iterations = 0
         dual = False
         while True:
             print("----------- Simplex", dual)
-            sol, basis, matrix = simplex(matrix, basis, 1 if basis is None else 2, dual)
+            A = [row[:-1] for row in matrix[:-1]]
+            b = [row[-1] for row in matrix[:-1]]
+            c = matrix[-1][:-1]
+            c0 = matrix[-1][-1]
+            sol, basis, matrix = solve_lp(c, A, b, basis, dual, c0)
             print(f"{index+1} Optimal cost:", sol, "Actual cost:", actual_sol, "✅" if sol == actual_sol else "❌")
             is_integer_solution = all(abs(matrix[i][-1] - round(matrix[i][-1])) < 1e-9 for i in range(len(matrix) -1))
             print("Integer solution?" , is_integer_solution)
@@ -274,11 +264,13 @@ def part2(input: str) -> str:
                 breaks.append((index+1, sol, actual_sol, [row[-1] for row in matrix]))
                 break
             if is_integer_solution:
-                if not is_optimal(matrix):
+                if is_optimal(matrix):
+                    print("Integer and optimal")
+                    break
+                else:
+                    print("Integer but no optimal")
                     dual = False
                     continue
-                else:
-                    break
             else:
                 # find a basic variable that is not integer to cutting plane
                 print_matrix(matrix, basis)
@@ -299,12 +291,16 @@ def part2(input: str) -> str:
                         print(new_row[-1])
                         break
                 iterations += 1
+        # A = [row[:-1] for row in matrix[:-1]]
+        # b = [row[-1] for row in matrix[:-1]]
+        # c = matrix[-1][:-1]
+        # sol, basis, matrix = solve_lp(c, A, b)
         print(sol) 
         if round(sol) != actual_sol:
             print(joltage)
             fail += 1
             fails.append((index+1, sol, actual_sol))
-            # exit(1)
+            exit(1)
         sol = round(sol)
         print("basis:", basis)
         res += sol
