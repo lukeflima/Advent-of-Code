@@ -4,7 +4,7 @@ from heapq import heappush, heappop
 import math 
 
 
-DEBUG = True
+DEBUG = False
 
 def pattern_to_num(pattern):
     n = 0
@@ -14,13 +14,12 @@ def pattern_to_num(pattern):
 
 
 def parse_machine(line: str):
-    [line, res] = line.split(" | ")
     blocks = line.split("] (")
     pattern = blocks[0][1:]
     blocks = blocks[1].split(") {")
     buttons = [set(map(int, btn_str[1:-1].split(","))) for btn_str in ("(" + blocks[0] + ")").split()]
     joltage = list(map(int, blocks[1][:-1].split(",")))
-    return pattern, buttons, joltage, int(res)
+    return pattern, buttons, joltage
 
 
 def apply_button(state, button):
@@ -33,7 +32,7 @@ def part1(input: str) -> str:
     machines = list(map(parse_machine, input.strip().split("\n")))
 
     res = 0
-    for pattern, buttons, _, _ in machines:
+    for pattern, buttons, _ in machines:
         graph = defaultdict(list)
         for i in range(2**len(pattern)):
             for b in buttons:
@@ -60,6 +59,7 @@ def part1(input: str) -> str:
 
 def print_c(c, name="Cost"):
     if not DEBUG: return
+    
     print(f"{name}:  ", end="")
     for val in c:
         print(f"{val:8.3f}", end=" ")
@@ -67,6 +67,7 @@ def print_c(c, name="Cost"):
 
 def print_matrix(matrix, basis):
     if not DEBUG: return
+    
     for b, row in zip(basis, matrix):
         print(f"x{b:02}: ", end="")
         for val in row:
@@ -86,14 +87,13 @@ def is_optimal(matrix):
     return all(c[i] >= -1e-9 for i in range(len(c)-1))
 
 def choose_next_basis(A, dual):
-    c = A[-1]
-    if dual: 
-        c = [row[-1] for row in A[:-1]] + [0]
-    print_c(c)
+    c = [row[-1] for row in A[:-1]] + [0] if dual else A[-1]
+    
     next = min(range(len(c) - 1), key=lambda i: c[i])
-    if DEBUG: print(next, c[next])
+    
     if c[next] <= -1e-9:
         return next
+    
     return -1
 
 def choose_leaving_var(matrix, next_basis_var, using_psdeo, dual):
@@ -110,12 +110,13 @@ def choose_leaving_var(matrix, next_basis_var, using_psdeo, dual):
         for i in range(n-k):
             if matrix[i][next_basis_var] > 1e-9:
                 ratios.append((i, matrix[i][-1] / matrix[i][next_basis_var]))
+    
     if len(ratios) == 0:
         return -1
+    
     if DEBUG: print("Ratios", ratios)
     leaving = min(ratios, key=lambda x: x[1])[0]
-    if DEBUG: print(next_basis_var, leaving)
-    # if dual: exit(1)
+
     return leaving
 
 
@@ -123,11 +124,12 @@ def choose_leaving_var(matrix, next_basis_var, using_psdeo, dual):
 def pivot(matrix, basis, next_basis_var, leaving, dual):
     if dual:
         next_basis_var, leaving = leaving, next_basis_var
+    
     n = len(matrix)
     m = len(matrix[0])-1
+    
     if DEBUG: print("Pivoting on row", leaving+1, "column", next_basis_var+1)
-    print(n,m)
-    #update basis
+
     basis[leaving] = next_basis_var
 
     if matrix[leaving][next_basis_var] != 1:
@@ -158,13 +160,17 @@ def simplex(matrix, basis=None, phase=1, dual=False):
             pseudo_objective[-1] -= matrix[i][-1]
 
             matrix[i] = matrix[i][:-1] + [0] * (i) +[1] + [0]*(n - i - 2) + [matrix[i][-1]]
+        
         matrix[-1] = matrix[-1][:-1] + [0]*(n-1) + [matrix[-1][-1]]
         m += n - 1
+        
         matrix.append(pseudo_objective)
         n += 1
+        
         if DEBUG: print(m,'x', n)
+    
     print_matrix(matrix, basis)
-    print("nxm", n,m)
+
     while True:
         next_basis_var = choose_next_basis(matrix, dual)
         if next_basis_var != -1:
@@ -172,7 +178,6 @@ def simplex(matrix, basis=None, phase=1, dual=False):
             if leaving == -1:
                 if DEBUG: print("no col found")
                 break
-            # print("Entering:", next_basis_var, "Leaving:", basis[leaving])
             pivot(matrix, basis, next_basis_var, leaving, dual)
             print_matrix(matrix, basis)
         else:
@@ -185,14 +190,15 @@ def simplex(matrix, basis=None, phase=1, dual=False):
             print("Must be 0 for feasable solution")
             print_matrix(matrix, basis)
             exit(1)
+        
         new_matrix = []
         m -= len(basis)
         n -= 1
         for i in range(n):
             new_matrix.append(matrix[i][:m] + [matrix[i][-1]])
-        matrix = new_matrix     
+        matrix = new_matrix   
         print_matrix(matrix, basis)
-        if DEBUG: print(basis, n)
+
         if DEBUG: print("Removing artificial variables from basis")
         for i in range(len(basis)):
             if basis[i] >= m:
@@ -209,12 +215,7 @@ def simplex(matrix, basis=None, phase=1, dual=False):
 
         print_matrix(matrix, basis)
     
-    sol = -matrix[-1][-1]
-    # if dual:
-    #     for i in range(len(matrix)):
-    #         matrix[i] = matrix[i][:-2] + [matrix[i][-1]]
-
-    return sol, basis, matrix
+    return -matrix[-1][-1], basis, matrix
 
     
 def solve_lp(c, A, b, basis=None, dual=False, c0=0):
@@ -226,90 +227,82 @@ def solve_lp(c, A, b, basis=None, dual=False, c0=0):
             return sol, basis, matrix
     return simplex(matrix, basis, 2, dual)
 
+def solve_mixedin(c, A, b, x=None, c0=0):
+    if x is None:
+        return solve_lp(c, A, b, c0=c0)
+    
+    matrix = [A[i] + [b[i]] for i in range(len(b))]
+    matrix.append(c+[c0])
+    basis = None
+    iterations = 0
+    dual = False
+    while True:
+        A = [row[:-1] for row in matrix[:-1]]
+        b = [row[-1] for row in matrix[:-1]]
+        c = matrix[-1][:-1]
+        c0 = matrix[-1][-1]
+        sol, basis, matrix = solve_lp(c, A, b, basis, dual, c0)
+        if iterations > 100:
+            break
+        
+        is_integer_solution = all(abs(matrix[i][-1] - round(matrix[i][-1])) < 1e-9 for i in range(len(matrix) -1) if basis[i] < len(x) and x[basis[i]])
+        if is_integer_solution:
+            if is_optimal(matrix):
+                if DEBUG: print("Integer and optimal")
+                break
+            else:
+                if DEBUG: print("Integer but no optimal")
+                dual = False
+                continue
+        else:
+            # find a basic integer variable that is not integer to cutting plane
+            print_matrix(matrix, basis)
+            for i in range(len(basis)):
+                if x[i] and abs(matrix[i][-1] - round(matrix[i][-1])) >= 1e-9:
+                    if DEBUG: print("Adding cutting plane for x", basis[i])
+                    
+                    new_row = [0.0]* (len(matrix[0]))
+                    for j in range(len(matrix[i])):
+                        new_row[j] = -matrix[i][j] + math.floor(matrix[i][j])
+                    new_row[-1] = -matrix[i][-1] + math.floor(matrix[i][-1])
+                    new_row.insert(-1, 1.0)  # new slack variable
+                    
+                    # adding new col
+                    for i in range(len(matrix)):
+                        matrix[i].insert(-1, 0.0)
+                    
+                    matrix.insert(-1, new_row)
+                    basis.append(len(matrix[0]) -2)
+
+                    dual = new_row[-1] < -1e-9
+                    
+                    print_matrix(matrix, basis)
+                    break
+            iterations += 1
+    return sol, basis, matrix
+
 def part2(input: str) -> str:
     machines = list(map(parse_machine, input.strip().split("\n")))
     res = 0
     fail = 0
-    breaks = []
-    fails = []
-    for index, (_, buttons, joltage, actual_sol) in enumerate(machines):
+    for index, (_, buttons, joltage) in enumerate(machines):
         matrix = set()
         for i, jolt in enumerate(joltage):
             row = [1.0 if i in button else 0.0 for button in buttons]
             row.append(float(jolt))
             matrix.add(tuple(row))
         matrix = [list(row) for row in matrix]
-        matrix.append([1]*(len(matrix[0]) - 1) + [0])
-        # print original_matrix
-        for row in matrix:
-            for val in row:
-                print(f"{val:8.3f}", end=" ")
-            print()
-        print()       
+        matrix.append([1]*(len(matrix[0]) - 1) + [0])       
         
-        basis = None
-        iterations = 0
-        dual = False
-        while True:
-            print("----------- Simplex", dual)
-            A = [row[:-1] for row in matrix[:-1]]
-            b = [row[-1] for row in matrix[:-1]]
-            c = matrix[-1][:-1]
-            c0 = matrix[-1][-1]
-            sol, basis, matrix = solve_lp(c, A, b, basis, dual, c0)
-            print(f"{index+1} Optimal cost:", sol, "Actual cost:", actual_sol, "✅" if sol == actual_sol else "❌")
-            is_integer_solution = all(abs(matrix[i][-1] - round(matrix[i][-1])) < 1e-9 for i in range(len(matrix) -1))
-            print("Integer solution?" , is_integer_solution)
-            if iterations > 100:
-                breaks.append((index+1, sol, actual_sol, [row[-1] for row in matrix]))
-                break
-            if is_integer_solution:
-                if is_optimal(matrix):
-                    print("Integer and optimal")
-                    break
-                else:
-                    print("Integer but no optimal")
-                    dual = False
-                    continue
-            else:
-                # find a basic variable that is not integer to cutting plane
-                print_matrix(matrix, basis)
-                for i in range(len(basis)):
-                    if abs(matrix[i][-1] - round(matrix[i][-1])) >= 1e-9:
-                        print("Adding cutting plane for x", basis[i])
-                        new_row = [0.0]* (len(matrix[0]))
-                        for j in range(len(matrix[i])):
-                            new_row[j] = -matrix[i][j] + math.floor(matrix[i][j])
-                        new_row[-1] = -matrix[i][-1] + math.floor(matrix[i][-1])
-                        new_row.insert(-1, 1.0)  # new slack variable
-                        for i in range(len(matrix)):
-                            matrix[i].insert(-1, 0.0)
-                        matrix.insert(-1, new_row)
-                        dual = new_row[-1] < -1e-9
-                        basis.append(len(matrix[0]) -2)
-                        print_matrix(matrix, basis)
-                        print(new_row[-1])
-                        break
-                iterations += 1
-        # A = [row[:-1] for row in matrix[:-1]]
-        # b = [row[-1] for row in matrix[:-1]]
-        # c = matrix[-1][:-1]
-        # sol, basis, matrix = solve_lp(c, A, b)
-        print(sol) 
-        if round(sol) != actual_sol:
-            print(joltage)
-            fail += 1
-            fails.append((index+1, sol, actual_sol))
-            exit(1)
+        A = [row[:-1] for row in matrix[:-1]]
+        b = [row[-1] for row in matrix[:-1]]
+        c = matrix[-1][:-1]
+        sol, basis, matrix = solve_mixedin(c, A, b, x=[1]*len(c))
+        
         sol = round(sol)
-        print("basis:", basis)
         res += sol
             
             
-    print(len(machines) - fail, "out of", len(machines), "passed.")
-    print(breaks)
-    print(fails)
-#    186 out of 195 passed.   
     return str(res)
 
 
