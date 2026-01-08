@@ -10,3 +10,5 @@ zig-out
 _build
 build
 .cache
+*.old
+nob
