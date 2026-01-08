@@ -6,7 +6,7 @@
 !**/CMakeLists.txt
 zig-out
 .zig-cache
-create_day
+*create_day*
 _build
 build
 .cache
