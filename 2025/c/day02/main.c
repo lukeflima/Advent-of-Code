@@ -22,7 +22,7 @@ uint64_t svtou64(Nob_String_View input) {
     bool is_neg = input.data[0] == '-';
     uint64_t res = 0;
     for(size_t i = is_neg ? 1 : 0; i < input.count; i++) {
-        if(input.data[i] < '0' && input.data[i] > '9') return 0;
+        if(input.data[i] < '0' || input.data[i] > '9') return 0;
         res = res * 10 + input.data[i] - '0';
     }
     return is_neg ? -res : res;
