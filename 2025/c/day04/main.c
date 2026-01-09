@@ -12,7 +12,7 @@ typedef struct {
 } Grid;
 
 #define grid_at(grid, x, y) (((x) >= 0) && ((x) < (grid).rows) && ((y) >= 0) && ((y) < (grid).cols) ? \
-                                ((grid).items[(x) + (y)*((grid).rows)]) : -1)
+                                ((grid).items[(x) + (y)*((grid).cols)]) : -1)
 
 
 void part1(Nob_String_View input) {
