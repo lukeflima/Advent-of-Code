@@ -13,3 +13,4 @@ build
 *.old
 nob
 main
+node_modules
