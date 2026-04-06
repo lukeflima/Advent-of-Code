@@ -14,28 +14,11 @@ typedef struct {
     size_t capacity;
 } DeviceList;
 
-typedef struct {
-    uint64_t id;
-    DeviceList outs;
-} Device;
-
-typedef struct {
-    Device* items;
-    size_t count;
-    size_t capacity;
-} Devices;
+typedef Ht(uint64_t, DeviceList) Devices;
 
 uint64_t name_to_id(Nob_String_View sv) {
     assert(sv.count == 3);
     return sv.data[0] + sv.data[1]*26 + sv.data[2]*26*26;
-}
-
-int find_index(Devices *devices, uint64_t v) {
-    for(size_t i = 0; i < devices->count; i++)
-        if(devices->items[i].id == v) 
-            return i;
-    
-    return -1;
 }
 
 size_t paths(uint64_t cur, uint64_t target, Devices *devices) {
@@ -43,8 +26,8 @@ size_t paths(uint64_t cur, uint64_t target, Devices *devices) {
     
     size_t res = 0;
 
-    uint64_t cur_index = find_index(devices, cur);
-    DeviceList *list = &devices->items[cur_index].outs;
+    DeviceList *list =  ht_find(devices, cur);
+    assert(list);
     for(size_t i = 0; i < list->count; i++) {
         res += paths(list->items[i], target,devices);
     }
@@ -58,15 +41,15 @@ void part1(Nob_String_View input) {
         Nob_String_View line = nob_sv_chop_by_delim(&input, '\n');
         Nob_String_View device_name = nob_sv_chop_by_delim(&line, ':');
         line = nob_sv_trim(line);
-        
-        Device device = {0};
-        device.id = name_to_id(device_name);
+
+        DeviceList device_list = {0};
+        uint64_t device_id = name_to_id(device_name);
         while(line.count > 0) {
             Nob_String_View num_sv = nob_sv_chop_by_delim(&line, ' ');
             uint64_t id = name_to_id(num_sv);
-            nob_da_append(&device.outs, id);
+            nob_da_append(&device_list, id);
         }
-        nob_da_append(&devices, device);
+        *ht_put(&devices, device_id) = device_list;
     }
 
     uint64_t start = name_to_id(nob_sv_from_cstr("you"));
@@ -99,8 +82,8 @@ size_t dfs(State state, Devices *devices, Cache *cache) {
     }
 
     size_t total = 0;
-    uint64_t cur_index = find_index(devices, state.cur);
-    DeviceList *list = &devices->items[cur_index].outs;
+    DeviceList *list = ht_find(devices, state.cur); 
+    assert(list);
     for(size_t i = 0; i < list->count; i++) {
         uint64_t next = list->items[i];
         State next_state = {next, state.found_fft || next == FFT, state.found_dac || next == DAC};
@@ -117,17 +100,18 @@ void part2(Nob_String_View input) {
         Nob_String_View line = nob_sv_chop_by_delim(&input, '\n');
         Nob_String_View device_name = nob_sv_chop_by_delim(&line, ':');
         line = nob_sv_trim(line);
-        
-        Device device = {0};
-        device.id = name_to_id(device_name);
+
+        DeviceList device_list = {0};
+        uint64_t device_id = name_to_id(device_name);
         while(line.count > 0) {
             Nob_String_View num_sv = nob_sv_chop_by_delim(&line, ' ');
             uint64_t id = name_to_id(num_sv);
-            nob_da_append(&device.outs, id);
+            nob_da_append(&device_list, id);
         }
-        nob_da_append(&devices, device);
+        *ht_put(&devices, device_id) = device_list;
     }
-    
+
+
     OUT = name_to_id(nob_sv_from_cstr("out"));
     FFT = name_to_id(nob_sv_from_cstr("fft"));
     DAC = name_to_id(nob_sv_from_cstr("dac"));
