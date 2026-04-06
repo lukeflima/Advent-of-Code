@@ -5,6 +5,8 @@
 #define NOB_IMPLEMENTATION
 #define NOB_STRIP_PREFIX
 #include "nob.h"
+#define HT_IMPLEMENTATION
+#include "ht.h"
 
 typedef struct {
     uint64_t* items;
@@ -83,52 +85,29 @@ typedef struct {
     uint64_t cur;
     bool found_fft;
     bool found_dac;
-    size_t value;
 } State;
 
-typedef struct {
-    State *items;
-    size_t count;
-    size_t capacity;
-} Cache;
+typedef Ht(State, size_t) Cache;
 
-int64_t find_index_cache(Cache *cache, uint64_t cur, bool found_fft, bool found_dac) {
-    for(size_t i = 0; i < cache->count; i++) {
-        State s = cache->items[i];
-        if(s.cur == cur && s.found_fft == found_fft && s.found_dac == found_dac) { 
-            return i;
-        }
-    }
-    
-    return -1;
-}
+size_t dfs(State state, Devices *devices, Cache *cache) {
+    size_t *cached = ht_find(cache, state);
+    if(cached) return *cached;
 
-size_t dfs(uint64_t cur, bool found_fft, bool found_dac, Devices *devices, Cache *cache) {
-    int64_t cache_index = find_index_cache(cache, cur, found_fft, found_dac);
-    if(cache_index != -1) return cache->items[cache_index].value;
-
-    if(cur == OUT) {
-        if(found_fft && found_dac) return 1;
+    if(state.cur == OUT) {
+        if(state.found_fft && state.found_dac) return 1;
         return 0;
     }
 
     size_t total = 0;
-    uint64_t cur_index = find_index(devices, cur);
+    uint64_t cur_index = find_index(devices, state.cur);
     DeviceList *list = &devices->items[cur_index].outs;
     for(size_t i = 0; i < list->count; i++) {
         uint64_t next = list->items[i];
-        total += dfs(next, found_fft || next == FFT, found_dac || next == DAC, devices, cache);
+        State next_state = {next, state.found_fft || next == FFT, state.found_dac || next == DAC};
+        total += dfs(next_state, devices, cache);
     }
 
-    State s = {
-        cur,
-        found_fft,
-        found_dac,
-        total
-    };
-
-    nob_da_append(cache, s);
-    return total;
+    return *ht_put(cache, state) = total;
 }
 
 
@@ -154,8 +133,8 @@ void part2(Nob_String_View input) {
     DAC = name_to_id(nob_sv_from_cstr("dac"));
 
     Cache cache = {0};
-    uint64_t start = name_to_id(nob_sv_from_cstr("svr"));
-    uint64_t res = dfs(start, false, false, &devices, &cache);
+    State start_state = {name_to_id(nob_sv_from_cstr("svr")), false, false};
+    uint64_t res = dfs(start_state, &devices, &cache);
 
     printf("Part 2: %zu\n", res);
 }
